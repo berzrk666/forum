@@ -41,10 +41,10 @@ class User(Base, TimestampMixin):
         self.password = hash_password(password)
 
     @property
-    def token(self):
+    def token(self) -> str:
         """Generate a JWT Token for the User."""
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRATION)
-        to_encode = {"exp": expire, "sub": self.id}
+        to_encode = {"exp": expire, "sub": self.username}
         return jwt.encode(to_encode, settings.JWT_KEY, settings.JWT_ALG)
 
     def __repr__(self) -> str:

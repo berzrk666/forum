@@ -1,10 +1,14 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, EmailStr
+
+from forum.schemas import Pagination
 
 
 class UserBase(BaseModel):
     """Base Pydantic model for User."""
 
-    email: EmailStr
+    username: str
 
     # Allows conversion from SQLAlchemy to Pydantic Model
     model_config = ConfigDict(from_attributes=True)
@@ -16,7 +20,32 @@ class UserLogin(UserBase):
     password: str
 
 
+class UserLoginResponse(BaseModel):
+    """Pydantic model for the response when User login."""
+
+    token: str
+
+
 class UserCreate(UserBase):
     """Pydantic model for User creation."""
 
+    email: EmailStr
+    username: str
     password: str
+
+
+class UserCreateResponse(BaseModel):
+    """Pydantic model for the response after User is created."""
+
+    token: str
+
+
+class UserRead(UserBase):
+    email: EmailStr
+    created_at: datetime
+
+
+class UserPagination(Pagination):
+    """Pydantic model for paginated results of Users."""
+
+    items: list[UserRead]
