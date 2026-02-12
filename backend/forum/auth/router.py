@@ -1,7 +1,5 @@
-from datetime import datetime, timezone
 import logging
 
-from argon2 import verify_password
 from fastapi import APIRouter, HTTPException, Request, status
 
 from forum.auth.exceptions import (
@@ -29,18 +27,13 @@ log = logging.getLogger(__name__)
 async def login_endpoint(db_session: DbSession, user_in: UserLogin, request: Request):
     """Login endpoint."""
     try:
-        user = await auth_service.authenticate(db_session, user_in)
+        user = await auth_service.authenticate(db_session, request, user_in)
         return UserLoginResponse(token=user.token)
     except IncorrectPasswordOrUsername:
-        log.warning(
-            f"Failed login attempt for username: {user_in.username} "
-            f"from IP: {request.client.host} at {datetime.now(timezone.utc)}"  # type: ignore
-        )
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, detail="Incorrect Username or Password"
         )
-    except Exception as e:
-        log.error(f"Error in login: {e}")
+    except Exception:
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
         )
