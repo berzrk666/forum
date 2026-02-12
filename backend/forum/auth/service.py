@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 class AuthService:
     async def register(self, session: AsyncSession, user_in: UserCreate) -> User:
-        """Authenticate a User."""
+        """Register a new User."""
         user = User(**user_in.model_dump(exclude={"password"}))
         user.set_password(user_in.password)
 
