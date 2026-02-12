@@ -23,7 +23,7 @@ class UserLogin(UserBase):
 class UserLoginResponse(BaseModel):
     """Pydantic model for the response when User login."""
 
-    token: str
+    token: "Token"
 
 
 class UserCreate(UserBase):
@@ -49,3 +49,8 @@ class UserPagination(Pagination):
     """Pydantic model for paginated results of Users."""
 
     items: list[UserRead]
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
