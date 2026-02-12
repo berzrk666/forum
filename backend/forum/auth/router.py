@@ -15,7 +15,7 @@ from forum.auth.schemas import (
     UserLogin,
     UserLoginResponse,
 )
-from forum.auth.service import create, get_by_username
+from forum.auth.service import auth as auth_service
 from forum.database.core import DbSession
 
 auth_router = APIRouter(prefix="/auth", tags=["authorization"])
@@ -29,9 +29,7 @@ log = logging.getLogger(__name__)
 async def login_endpoint(db_session: DbSession, user_in: UserLogin, request: Request):
     """Login endpoint."""
     try:
-        user = await get_by_username(db_session, user_in.username)
-        if not user or not (user.verify_password(user_in.password)):
-            raise IncorrectPasswordOrUsername
+        user = await auth_service.authenticate(db_session, user_in)
         return UserLoginResponse(token=user.token)
     except IncorrectPasswordOrUsername:
         log.warning(
@@ -53,8 +51,7 @@ async def login_endpoint(db_session: DbSession, user_in: UserLogin, request: Req
 )
 async def register_user(db_session: DbSession, user_in: UserCreate):
     try:
-        user = await create(db_session, user_in)
-        log.info(type(user.token))
+        user = await auth_service.register(db_session, user_in)
         return UserCreateResponse(token=user.token)
     except UsernameAlreadyExists:
         raise HTTPException(status.HTTP_409_CONFLICT, "Username already exists.")
