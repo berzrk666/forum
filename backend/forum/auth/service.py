@@ -5,10 +5,12 @@ from fastapi import Request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select
+from redis.asyncio import Redis
 
 from forum.auth.exceptions import (
     EmailAlreadyExists,
     IncorrectPasswordOrUsername,
+    InsufficientPermission,
     UsernameAlreadyExists,
 )
 from forum.auth.models import User
@@ -47,9 +49,35 @@ class AuthService:
             log.error(f"Error authenticating {user_in}: {e}")
             raise
 
+    async def check_authorization(
+        self, request: Request, user: User, permissions: set[str]
+    ):
+        """Validate if the user has authozitation."""
+        try:
+            user_perms = await self._get_permissions(request.state.app.cache, user)
+            if user_perms and permissions <= user_perms:
+                return True
+            raise InsufficientPermission
+        except Exception:
+            pass
+
     async def _get(self, session: AsyncSession, id: int) -> User | None:
         """Returns a User by ID."""
         return await session.get(User, id)
+
+    async def _get_permissions(self, cache: Redis, user: User) -> set[str] | None:
+        """
+        Attempt permissions retrieval from cache.
+        Otherwise retrieve from database and update cache.
+        """
+        cache_key = f"users_perms:{user.id}"
+
+        perms = await cache.smembers(cache_key)  # type:ignore
+        if perms:
+            return perms
+
+        # Cache miss -> Retrive from database
+        # TODO: retrieve from database
 
     async def _get_by_username(
         self, session: AsyncSession, username: str

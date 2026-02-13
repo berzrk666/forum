@@ -12,3 +12,7 @@ class EmailAlreadyExists(Exception):
 
 class IncorrectPasswordOrUsername(Exception):
     pass
+
+
+class InsufficientPermission(Exception):
+    pass

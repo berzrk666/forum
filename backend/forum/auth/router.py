@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 
-from forum.auth.dependencies import CurrentUser
+from forum.auth.dependencies import CurrentUser, PermissionDependency
 from forum.auth.exceptions import (
     EmailAlreadyExists,
     IncorrectPasswordOrUsername,
@@ -38,6 +38,8 @@ async def login_endpoint(
         # token = Token(access_token=user.token)
         # return UserLoginResponse(token=token)
         await request.app.state.cache.sadd("users", user.username)
+        await request.app.state.cache.sadd(f"users_perms:{user.id}", "posts:read")
+        await request.app.state.cache.sadd(f"users_perms:{user.id}", "posts:edit")
         return Token(access_token=user.token)
     except IncorrectPasswordOrUsername:
         raise HTTPException(
@@ -73,3 +75,19 @@ async def register_user(db_session: DbSession, user_in: UserCreate):
 async def read_user_me(current_user: CurrentUser) -> UserRead:
     """Me endpoint"""
     return current_user
+
+
+@auth_router.get(
+    "/me/posts/{post_id}",
+    dependencies=[
+        Depends(
+            PermissionDependency(
+                {
+                    "posts:read",
+                }
+            )
+        )
+    ],
+)
+async def read_user_post_id(post_id: int):
+    return {"status": "ok"}

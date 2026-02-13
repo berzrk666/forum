@@ -1,9 +1,10 @@
 from typing import Annotated
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security.oauth2 import OAuth2PasswordBearer
 
+from forum.auth.exceptions import InsufficientPermission
 from forum.auth.models import User
 from forum.auth.service import auth as auth_service
 from forum.config import settings
@@ -35,3 +36,18 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+class PermissionDependency:
+    """Check if User has a set of permissions as dependency."""
+
+    def __init__(self, permissions: set[str]) -> None:
+        self._perm = permissions
+
+    async def __call__(self, request: Request, user: CurrentUser):
+        try:
+            await auth_service.check_authorization(request, user, self._perm)
+        except InsufficientPermission:
+            raise HTTPException(
+                status.HTTP_401_UNAUTHORIZED, "Insufficient Permissions"
+            )
