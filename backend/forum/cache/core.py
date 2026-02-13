@@ -1,6 +1,5 @@
-from typing import Annotated, AsyncGenerator
+from typing import AsyncGenerator
 
-from fastapi import Depends
 import redis.asyncio as redis
 
 from forum.config import settings
@@ -17,4 +16,7 @@ async def get_cache() -> AsyncGenerator[redis.Redis, None]:
         raise
 
 
-CacheClient = Annotated[redis.Redis, Depends(get_cache)]
+def get_cache_pool():
+    return redis.ConnectionPool(
+        host=settings.REDIS_HOST, port=settings.REDIS_PORT, decode_responses=True
+    )

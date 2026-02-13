@@ -37,6 +37,7 @@ async def login_endpoint(
         user = await auth_service.authenticate(db_session, request, user_in)
         # token = Token(access_token=user.token)
         # return UserLoginResponse(token=token)
+        await request.app.state.cache.sadd("users", user.username)
         return Token(access_token=user.token)
     except IncorrectPasswordOrUsername:
         raise HTTPException(

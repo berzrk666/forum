@@ -2,8 +2,10 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+import redis.asyncio as redis
 
 from forum.api import api_router
+from forum.cache.core import get_cache_pool
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -13,10 +15,13 @@ log = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     log.info("Starting Forum API")
 
+    app.state.cache = redis.Redis(connection_pool=get_cache_pool())
+
     # before
     yield
     # after
 
+    await app.state.cache.close()
     log.info("Forum API stopped")
 
 
