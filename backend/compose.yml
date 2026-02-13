@@ -36,6 +36,9 @@ services:
     container_name: forum-adminer
     ports:
       - "5050:8080"
-
+  cache:
+    image: redis:latest
+    ports:
+      - "6379:6379"
 volumes:
   postgres_data:

@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "postgresdb"
 
+    REDIS_HOST: str = "127.0.0.1"
+    REDIS_PORT: int = 6379
+
     @computed_field
     @property
     def DATABASE_URI(self) -> PostgresDsn:
