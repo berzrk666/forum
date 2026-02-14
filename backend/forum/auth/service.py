@@ -69,8 +69,9 @@ class AuthService:
             if user_perms and permissions <= user_perms:
                 return True
             raise InsufficientPermission
-        except Exception:
-            pass
+        except Exception as e:
+            log.error(f"Unexpected error when checking authorization for {user}: {e}")
+            raise
 
     async def _get(self, session: AsyncSession, id: int) -> User | None:
         """Returns a User by ID."""

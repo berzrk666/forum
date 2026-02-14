@@ -51,3 +51,7 @@ class PermissionDependency:
             raise HTTPException(
                 status.HTTP_401_UNAUTHORIZED, "Insufficient Permissions"
             )
+        except Exception:
+            raise HTTPException(
+                status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
+            )
