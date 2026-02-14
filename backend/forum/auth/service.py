@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timezone
 
+from argon2.exceptions import VerifyMismatchError
 from fastapi import Request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,10 +14,12 @@ from forum.auth.exceptions import (
     InsufficientPermission,
     UsernameAlreadyExists,
 )
-from forum.auth.models import User
+from forum.auth.models import User, hash_password, verify_hash
 from forum.auth.schemas import UserCreate, UserLogin
 
 log = logging.getLogger(__name__)
+
+DUMMY_HASH = hash_password("dummypassword")
 
 
 class AuthService:
@@ -38,13 +41,21 @@ class AuthService:
         """
         try:
             user = await self._get_by_username(session, user_in.username)
-            if not user or not (user.verify_password(user_in.password)):
+            if not user:
+                verify_hash(user_in.password, DUMMY_HASH)
                 log.warning(
-                    f"Failed login attempt for username: {user_in.username} "
+                    f"Failed login attempt with non-existent username: {user_in.username}"
                     f"from IP: {request.client.host} at {datetime.now(timezone.utc)}"  # type: ignore
                 )
                 raise IncorrectPasswordOrUsername
+            user.verify_password(user_in.password)
             return user
+        except VerifyMismatchError:
+            log.warning(
+                f"Failed login attempt with wrong password for username: {user_in.username} "
+                f"from IP: {request.client.host} at {datetime.now(timezone.utc)}"  # type: ignore
+            )
+            raise IncorrectPasswordOrUsername
         except Exception as e:
             log.error(f"Error authenticating {user_in}: {e}")
             raise
