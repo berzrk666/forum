@@ -1,4 +1,6 @@
 from typing import Any, AsyncGenerator
+from unittest.mock import MagicMock
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -42,3 +44,13 @@ def user_data() -> dict[str, Any]:
         "email": VALID_EMAIL,
         "password": VALID_PASSWORD,
     }
+
+
+@pytest.fixture
+def mock_request():
+    request = MagicMock()
+    request.client = MagicMock()
+    request.client.host = "127.0.0.1"
+    request.app = MagicMock()
+    request.app.state = MagicMock()
+    return request
