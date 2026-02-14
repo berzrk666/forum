@@ -2,6 +2,7 @@ from typing import Any, AsyncGenerator
 from unittest.mock import MagicMock
 
 import pytest
+from fakeredis.aioredis import FakeRedis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from forum.database.core import Base
@@ -35,6 +36,11 @@ async def test_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
 
     async with sessionlocal() as session:
         yield session
+
+
+@pytest.fixture
+async def test_redis():
+    return FakeRedis(decode_responses=True)
 
 
 @pytest.fixture

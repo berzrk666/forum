@@ -1,10 +1,13 @@
+from unittest.mock import MagicMock
 import pytest
 
 from forum.auth.exceptions import (
     EmailAlreadyExists,
     IncorrectPasswordOrUsername,
+    InsufficientPermission,
     UsernameAlreadyExists,
 )
+from forum.auth.models import User
 from forum.auth.schemas import UserCreate, UserLogin
 from forum.auth.service import AuthService
 from tests.conftest import VALID_EMAIL, VALID_PASSWORD, VALID_USERNAME
@@ -152,3 +155,110 @@ class TestAuthServiceAuthenticate:
         """IncorrectPasswordOrUsername should be raised for inexistent usernames."""
         with pytest.raises(IncorrectPasswordOrUsername):
             await auth_service.authenticate(test_session, mock_request, valid_login)
+
+
+class TestAuthAuthorization:
+    @pytest.fixture
+    def test_request(self, mock_request, test_redis):
+        mock_request.state.app.cache = test_redis
+        return mock_request
+
+    async def test_authorization_with_sufficient_permissions(
+        self, auth_service: AuthService, test_request, test_redis
+    ):
+        """Check authorization works when the user has one permisson and requires this one permisson."""
+        user = User(username=VALID_USERNAME, email=VALID_EMAIL)
+        user.id = 1
+        user.set_password(VALID_PASSWORD)
+
+        perms = {"posts:read"}
+
+        await test_redis.sadd(f"users_perms:{user.id}", *perms)
+
+        result = await auth_service.check_authorization(test_request, user, perms)
+
+        assert result is True
+
+    async def test_authorization_user_with_multiple_permission_but_requires_only_one(
+        self, auth_service: AuthService, test_request, test_redis
+    ):
+        """Check authorization works when the user has many permissons, but requires only one."""
+        user = User(username=VALID_USERNAME, email=VALID_EMAIL)
+        user.id = 1
+        user.set_password(VALID_PASSWORD)
+
+        perms = {"posts:read", "posts:edit", "posts:create", "posts:delete"}
+
+        await test_redis.sadd(f"users_perms:{user.id}", *perms)
+
+        result = await auth_service.check_authorization(
+            test_request, user, {"posts:create"}
+        )
+
+        assert result is True
+
+    async def test_authorization_user_with_multiple_permission_and_requires_all(
+        self, auth_service: AuthService, test_request, test_redis
+    ):
+        """Check authorization works when the user has many permissons and requires all of them."""
+        user = User(username=VALID_USERNAME, email=VALID_EMAIL)
+        user.id = 1
+        user.set_password(VALID_PASSWORD)
+
+        perms = {"posts:read", "posts:edit", "posts:create", "posts:delete"}
+
+        await test_redis.sadd(f"users_perms:{user.id}", *perms)
+
+        result = await auth_service.check_authorization(test_request, user, perms)
+
+        assert result is True
+
+    async def test_authorization_user_with_one_wrong_permission(
+        self, auth_service: AuthService, test_request, test_redis
+    ):
+        """Check authorization raise InsufficientPermission when the user have
+        only one permission and it's not the required one."""
+        user = User(username=VALID_USERNAME, email=VALID_EMAIL)
+        user.id = 1
+        user.set_password(VALID_PASSWORD)
+
+        perms = {"posts:read"}
+
+        await test_redis.sadd(f"users_perms:{user.id}", *perms)
+
+        with pytest.raises(InsufficientPermission):
+            await auth_service.check_authorization(test_request, user, {"posts:edit"})
+
+    async def test_authorization_user_with_multiple_wrong_permissions_one_required(
+        self, auth_service: AuthService, test_request, test_redis
+    ):
+        """Check authorization raise InsufficientPermission when the
+        user have multiple permission and neither is the required one."""
+        user = User(username=VALID_USERNAME, email=VALID_EMAIL)
+        user.id = 1
+        user.set_password(VALID_PASSWORD)
+
+        perms = {"posts:read", "posts:edit", "posts:create"}
+
+        await test_redis.sadd(f"users_perms:{user.id}", *perms)
+
+        with pytest.raises(InsufficientPermission):
+            await auth_service.check_authorization(test_request, user, {"posts:delete"})
+
+    async def test_authorization_user_with_multiple_wrong_permissions_multiple_required(
+        self, auth_service: AuthService, test_request, test_redis
+    ):
+        """Check authorization raise InsufficientPermission when the
+        user have multiple permission and requires multiple permissions"""
+        user = User(username=VALID_USERNAME, email=VALID_EMAIL)
+        user.id = 1
+        user.set_password(VALID_PASSWORD)
+
+        perms = {"posts:read", "posts:edit", "posts:create"}
+
+        await test_redis.sadd(f"users_perms:{user.id}", *perms)
+
+        with pytest.raises(InsufficientPermission):
+            await auth_service.check_authorization(
+                test_request, user, {"posts:delete", "posts:update"}
+            )
