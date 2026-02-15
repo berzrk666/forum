@@ -30,6 +30,7 @@ class User(Base, TimestampMixin):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
 
     # Relationships
+    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), nullable=True)
     role: Mapped["Role"] = relationship(back_populates="users")
 
     def verify_password(self, password: str) -> bool:
