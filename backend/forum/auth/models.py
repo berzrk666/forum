@@ -2,7 +2,8 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 from argon2 import PasswordHasher
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Column, ForeignKey, Table
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import Integer, LargeBinary, String
 
 from forum.config import settings
@@ -28,6 +29,9 @@ class User(Base, TimestampMixin):
     password: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
 
+    # Relationships
+    role: Mapped["Role"] = relationship(back_populates="users")
+
     def verify_password(self, password: str) -> bool:
         """Check if the `password` matches the hashed password in database."""
         if not password:
@@ -49,3 +53,33 @@ class User(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"User=(id={self.id!r}, username={self.username!r}, created_at={self.created_at!r}, updated_at={self.updated_at!r})"
+
+
+class Module(Base):
+    __tablename__ = "modules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(30), unique=True)
+
+
+class Action(Base):
+    __tablename__ = "actions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(30), unique=True)
+
+
+role_permissions = Table(
+    "role_permissions",
+    Base.metadata,
+    Column("role_id", ForeignKey("roles.id"), primary_key=True),
+    Column("module_id", ForeignKey("modules.id"), primary_key=True),
+    Column("action_id", ForeignKey("actions.id"), primary_key=True),
+)
+
+
+class Role(Base):
+    __tablename__ = "roles"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(30), unique=True)
+
+    users: Mapped[list[User]] = relationship(back_populates="role")
