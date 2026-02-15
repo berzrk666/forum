@@ -19,8 +19,10 @@ from forum.auth.schemas import (
 )
 from forum.auth.service import auth as auth_service
 from forum.database.core import DbSession
+from forum.auth.rbac.router import rbac_router
 
 auth_router = APIRouter(prefix="/auth", tags=["authorization"])
+auth_router.include_router(rbac_router)
 
 log = logging.getLogger(__name__)
 
@@ -54,13 +56,13 @@ async def login_endpoint(
 
 
 @auth_router.post(
-    "/register", response_model=UserCreateResponse, status_code=status.HTTP_201_CREATED
+    "/register", response_model=Token, status_code=status.HTTP_201_CREATED
 )
 async def register_user(db_session: DbSession, user_in: UserCreate):
     """Register user endpoint."""
     try:
         user = await auth_service.register(db_session, user_in)
-        return UserCreateResponse(token=user.token)
+        return Token(access_token=user.token)
     except UsernameAlreadyExists:
         raise HTTPException(status.HTTP_409_CONFLICT, "Username already exists")
     except EmailAlreadyExists:
