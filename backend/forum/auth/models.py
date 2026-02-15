@@ -56,28 +56,6 @@ class User(Base, TimestampMixin):
         return f"User=(id={self.id!r}, username={self.username!r}, created_at={self.created_at!r}, updated_at={self.updated_at!r})"
 
 
-class Module(Base):
-    __tablename__ = "modules"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(30), unique=True)
-
-
-class Action(Base):
-    __tablename__ = "actions"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(30), unique=True)
-
-
-role_permissions = Table(
-    "role_permissions",
-    Base.metadata,
-    Column("role_id", ForeignKey("roles.id"), primary_key=True),
-    Column("module_id", ForeignKey("modules.id"), primary_key=True),
-    Column("action_id", ForeignKey("actions.id"), primary_key=True),
-)
-
-
 class Role(Base):
     __tablename__ = "roles"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
