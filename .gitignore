@@ -1,5 +1,6 @@
 .env
 *.md
+.DS_STORE
 
 # Python-generated files
 __pycache__/
