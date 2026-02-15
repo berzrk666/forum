@@ -3,6 +3,7 @@ from typing import Annotated
 import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security.oauth2 import OAuth2PasswordBearer
+from starlette.status import HTTP_401_UNAUTHORIZED
 
 from forum.auth.exceptions import InsufficientPermission
 from forum.auth.models import User
@@ -13,15 +14,17 @@ from forum.database.core import DbSession
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
+credentials_exception = HTTPException(
+    status.HTTP_401_UNAUTHORIZED,
+    detail="Could not validate credentials",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+
 async def get_current_user(
     session: DbSession, token: Annotated[str, Depends(oauth2_scheme)]
 ) -> User:
     """Validate current user"""
-    credentials_exception = HTTPException(
-        status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
     try:
         payload = jwt.decode(token, settings.JWT_KEY, algorithms=[settings.JWT_ALG])
         username = payload.get("sub")
@@ -36,6 +39,26 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+async def moderator_user(current_user: CurrentUser):
+    """Validate  if user is at least a moderator."""
+    if current_user.role.name in ["Moderator", "Admin"]:
+        return current_user
+    raise HTTPException(status.HTTP_401_UNAUTHORIZED, "You must be a moderator")
+
+
+ModeratorUser = Annotated[User, Depends(moderator_user)]
+
+
+async def admin_user(current_user: CurrentUser):
+    """Validate  if user is an Admin."""
+    if current_user.role.name == "Admin":
+        return current_user
+    raise HTTPException(status.HTTP_401_UNAUTHORIZED, "You must be an admin")
+
+
+ModeratorUser = Annotated[User, Depends(admin_user)]
 
 
 class PermissionDependency:
