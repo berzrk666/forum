@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 
-from forum.auth.dependencies import CurrentUser, PermissionDependency
+from forum.auth.dependencies import CurrentUser, ModeratorUser, PermissionDependency
 from forum.auth.exceptions import (
     EmailAlreadyExists,
     IncorrectPasswordOrUsername,
@@ -14,6 +14,7 @@ from forum.auth.schemas import (
     Token,
     UserCreate,
     UserLogin,
+    UserPagination,
     UserRead,
 )
 from forum.auth.service import auth as auth_service
@@ -69,6 +70,11 @@ async def register_user(db_session: DbSession, user_in: UserCreate):
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
         )
+
+
+@user_router.get("/", response_model=UserPagination)
+async def read_users(moderator: ModeratorUser):
+    pass
 
 
 @user_router.get("/me")
