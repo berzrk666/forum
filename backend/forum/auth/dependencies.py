@@ -3,7 +3,6 @@ from typing import Annotated
 import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security.oauth2 import OAuth2PasswordBearer
-from starlette.status import HTTP_401_UNAUTHORIZED
 
 from forum.auth.exceptions import InsufficientPermission
 from forum.auth.models import User
@@ -58,7 +57,7 @@ async def admin_user(current_user: CurrentUser):
     raise HTTPException(status.HTTP_401_UNAUTHORIZED, "You must be an admin")
 
 
-ModeratorUser = Annotated[User, Depends(admin_user)]
+AdminUser = Annotated[User, Depends(admin_user)]
 
 
 class PermissionDependency:
