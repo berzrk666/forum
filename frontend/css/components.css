@@ -1,0 +1,236 @@
+/* ── Category group box ── */
+.category-group {
+  margin-bottom: var(--spacing-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.category-group__header {
+  background: var(--color-bg-category-header);
+  color: var(--color-text-inverse);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: bold;
+}
+
+/* ── Forum table ── */
+.forum-table {
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.forum-table table {
+  width: 100%;
+}
+
+.forum-table th {
+  background: var(--color-bg-category-header);
+  color: var(--color-text-inverse);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.85rem;
+  font-weight: bold;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.forum-table td {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--color-border-light);
+  vertical-align: middle;
+}
+
+.forum-table tr:nth-child(even) td {
+  background-color: var(--color-row-even);
+}
+
+.forum-table tr:nth-child(odd) td {
+  background-color: var(--color-row-odd);
+}
+
+.forum-table tr:hover td {
+  background-color: var(--color-row-hover);
+}
+
+.forum-table__icon {
+  width: 24px;
+  text-align: center;
+}
+
+.forum-table__title a {
+  color: var(--color-text-link);
+  font-weight: bold;
+}
+
+.forum-table__title a:hover {
+  color: var(--color-text-link-hover);
+  text-decoration: underline;
+}
+
+.forum-table__description {
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+  margin-top: 2px;
+}
+
+.forum-table__stat {
+  text-align: center;
+  white-space: nowrap;
+  color: var(--color-text-light);
+  font-size: 0.85rem;
+}
+
+.forum-table__lastpost {
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.forum-table__lastpost a {
+  color: var(--color-text-link);
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-block;
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: 0.85rem;
+  font-weight: bold;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  border-color: var(--color-primary-dark);
+}
+
+.btn--primary:hover {
+  background: var(--color-primary-dark);
+}
+
+.btn--secondary {
+  background: var(--color-bg-content);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.btn--secondary:hover {
+  background: var(--color-bg-alt);
+}
+
+/* ── Form controls ── */
+.form-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: bold;
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-text);
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-bg-input);
+  font-size: 0.85rem;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--color-primary-light);
+  box-shadow: 0 0 3px rgba(58, 122, 191, 0.3);
+}
+
+.form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* ── Form box (login/register container) ── */
+.form-box {
+  max-width: 420px;
+  margin: var(--spacing-xl) auto;
+  background: var(--color-bg-content);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.form-box__header {
+  background: var(--color-bg-category-header);
+  color: var(--color-text-inverse);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-weight: bold;
+  font-size: 0.95rem;
+}
+
+.form-box__body {
+  padding: var(--spacing-lg);
+}
+
+.form-box__footer {
+  padding: var(--spacing-sm) var(--spacing-lg) var(--spacing-lg);
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+}
+
+.form-box__footer a {
+  color: var(--color-text-link);
+}
+
+.form-error {
+  background: var(--color-error);
+  color: #fff;
+  padding: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  font-size: 0.85rem;
+  border-radius: 2px;
+}
+
+/* ── Pagination ── */
+.pagination {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  margin: var(--spacing-md) 0;
+}
+
+.pagination__item {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: 0.8rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-content);
+  color: var(--color-text-link);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.pagination__item:hover {
+  background: var(--color-bg-alt);
+}
+
+.pagination__item--active {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  border-color: var(--color-primary-dark);
+  font-weight: bold;
+  cursor: default;
+}
+
+.pagination__item--disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}

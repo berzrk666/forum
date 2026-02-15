@@ -1,0 +1,54 @@
+:root {
+  /* Primary colors */
+  --color-primary-dark: #1a3a5c;
+  --color-primary: #2c5a8c;
+  --color-primary-light: #3a7abf;
+
+  /* Backgrounds */
+  --color-bg-body: #e8e8e8;
+  --color-bg-content: #ffffff;
+  --color-bg-alt: #f2f6fa;
+  --color-bg-header: linear-gradient(to bottom, #3a7abf, #1a3a5c);
+  --color-bg-category-header: linear-gradient(to bottom, #6b9fd4, #3a6ea0);
+  --color-bg-input: #ffffff;
+
+  /* Text */
+  --color-text: #333333;
+  --color-text-light: #666666;
+  --color-text-muted: #999999;
+  --color-text-inverse: #ffffff;
+  --color-text-link: #1a5a8c;
+  --color-text-link-hover: #0d3f66;
+
+  /* Borders */
+  --color-border: #b8b8b8;
+  --color-border-light: #d4d4d4;
+  --color-border-dark: #1a3a5c;
+
+  /* Status / accent */
+  --color-online: #4caf50;
+  --color-sticky: #fff3cd;
+  --color-error: #c0392b;
+  --color-success: #27ae60;
+
+  /* Table rows */
+  --color-row-even: #ffffff;
+  --color-row-odd: #f2f6fa;
+  --color-row-hover: #e8f0fa;
+
+  /* Fonts */
+  --font-primary: Tahoma, Verdana, Geneva, sans-serif;
+  --font-heading: Verdana, Tahoma, Geneva, sans-serif;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+
+  /* Layout */
+  --max-width: 960px;
+  --border-radius: 4px;
+  --header-height: 80px;
+}
