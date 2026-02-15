@@ -13,16 +13,14 @@ from forum.auth.exceptions import (
 from forum.auth.schemas import (
     Token,
     UserCreate,
-    UserCreateResponse,
     UserLogin,
     UserRead,
 )
 from forum.auth.service import auth as auth_service
 from forum.database.core import DbSession
-from forum.auth.rbac.router import rbac_router
 
 auth_router = APIRouter(prefix="/auth", tags=["authorization"])
-auth_router.include_router(rbac_router)
+user_router = APIRouter(prefix="/users", tags=["users"])
 
 log = logging.getLogger(__name__)
 
@@ -73,23 +71,23 @@ async def register_user(db_session: DbSession, user_in: UserCreate):
         )
 
 
-@auth_router.get("/me")
+@user_router.get("/me")
 async def read_user_me(current_user: CurrentUser) -> UserRead:
     """Me endpoint"""
     return current_user
 
 
-@auth_router.get(
-    "/me/posts/{post_id}",
-    dependencies=[
-        Depends(
-            PermissionDependency(
-                {
-                    "posts:read",
-                }
-            )
-        )
-    ],
-)
-async def read_user_post_id(post_id: int):
-    return {"status": "ok"}
+# @user_router.get(
+#     "/me/posts/{post_id}",
+#     dependencies=[
+#         Depends(
+#             PermissionDependency(
+#                 {
+#                     "posts:read",
+#                 }
+#             )
+#         )
+#     ],
+# )
+# async def read_user_post_id(post_id: int):
+#     return {"status": "ok"}
