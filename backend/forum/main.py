@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import redis.asyncio as redis
 
 from forum.api import api_router
+from forum.auth import utils
+from forum.database.core import sessionlocal
 from forum.cache.core import get_cache_pool
 
 logging.basicConfig(level=logging.INFO)
@@ -17,6 +19,7 @@ async def lifespan(app: FastAPI):
     log.info("Starting Forum API")
 
     app.state.cache = redis.Redis(connection_pool=get_cache_pool())
+    await utils.init_roles(sessionlocal())
 
     # before
     yield
