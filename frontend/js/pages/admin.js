@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from "../components/breadcrumb.js";
 import { isLoggedIn, getRole } from "../state.js";
-import { getUsers } from "../api/admin.js";
+import { getUsers, getCategories, createCategory, deleteCategory } from "../api/admin.js";
 
 const ADMIN_ROLES = ["Admin", "Moderator"];
 
@@ -366,7 +366,48 @@ function renderAnnouncements(container) {
 // FORUMS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function renderCategories(container) {
+async function renderCategories(container) {
+  let categories = [];
+  try {
+    const data = await getCategories();
+    categories = data.data || [];
+  } catch (err) {
+    container.innerHTML = `<p style="color: var(--color-error);">${escapeHtml(err.message)}</p>`;
+    return;
+  }
+
+  const realCategoryRows = categories.length > 0
+    ? categories.map((cat) => `
+        <tr>
+          <td>${cat.order}</td>
+          <td>${escapeHtml(cat.name)}</td>
+          <td>0</td>
+          <td style="text-align:center;">
+            <button class="btn btn--sm" disabled>Edit</button>
+            <button class="btn btn--sm btn--danger" data-delete-category="${cat.id}">Delete</button>
+          </td>
+        </tr>
+      `).join("")
+    : '<tr><td colspan="4" style="text-align:center; color: var(--color-text-muted);">No categories configured</td></tr>';
+
+  const sampleCategories = [
+    { order: 1, name: "General", forums: 2 },
+    { order: 2, name: "Technology", forums: 3 },
+    { order: 3, name: "Off-Topic", forums: 2 },
+  ];
+
+  const sampleCategoryRows = sampleCategories.map((cat) => `
+    <tr style="opacity: 0.6;">
+      <td>${cat.order}</td>
+      <td>${escapeHtml(cat.name)}</td>
+      <td>${cat.forums}</td>
+      <td style="text-align:center;">
+        <button class="btn btn--sm" disabled>Edit</button>
+        <button class="btn btn--sm btn--danger" disabled>Delete</button>
+      </td>
+    </tr>
+  `).join("");
+
   container.innerHTML = `
     <div class="category-group">
       <div class="category-group__header">Forum Categories</div>
@@ -381,7 +422,7 @@ function renderCategories(container) {
             </tr>
           </thead>
           <tbody>
-            <tr><td colspan="4" style="text-align:center; color: var(--color-text-muted);">No categories configured</td></tr>
+            ${realCategoryRows}
           </tbody>
         </table>
       </div>
@@ -390,16 +431,79 @@ function renderCategories(container) {
     <div class="form-box" style="max-width:100%; margin-top: var(--spacing-md);">
       <div class="form-box__header">Add Category</div>
       <div class="form-box__body">
-        <div style="display:flex; gap: var(--spacing-sm); align-items:flex-end;">
+        <div id="category-error" class="form-error" style="display:none;"></div>
+        <form id="add-category-form" style="display:flex; gap: var(--spacing-sm); align-items:flex-end;">
           <div class="form-group" style="flex:1; margin-bottom:0;">
             <label>Category Name</label>
-            <input type="text" placeholder="e.g. General Discussion">
+            <input type="text" id="category-name" placeholder="e.g. General Discussion" required>
           </div>
-          <button type="button" class="btn btn--primary" disabled>Add Category</button>
-        </div>
+          <div class="form-group" style="width:80px; margin-bottom:0;">
+            <label>Order</label>
+            <input type="number" id="category-order" min="1" placeholder="${categories.length + 1}">
+          </div>
+          <button type="submit" class="btn btn--primary">Add Category</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="category-group" style="margin-top: var(--spacing-lg);">
+      <div class="category-group__header" style="background: var(--color-text-muted);">Sample Categories (for reference)</div>
+      <div class="forum-table">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:50px;">Order</th>
+              <th>Name</th>
+              <th style="width:80px;">Forums</th>
+              <th style="width:120px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sampleCategoryRows}
+          </tbody>
+        </table>
       </div>
     </div>
   `;
+
+  // Mount form handler
+  const form = document.getElementById("add-category-form");
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById("category-error");
+      const nameInput = document.getElementById("category-name");
+      const orderInput = document.getElementById("category-order");
+
+      const name = nameInput.value.trim();
+      const order = orderInput.value ? parseInt(orderInput.value, 10) : null;
+
+      if (!name) return;
+
+      try {
+        errorEl.style.display = "none";
+        await createCategory(name, order);
+        await renderCategories(container);
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = "block";
+      }
+    });
+  }
+
+  // Mount delete handlers
+  document.querySelectorAll("[data-delete-category]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.deleteCategory;
+      if (!confirm("Are you sure you want to delete this category?")) return;
+      try {
+        await deleteCategory(id);
+        await renderCategories(container);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
 }
 
 function renderForums(container) {

@@ -1,7 +1,7 @@
 import { addRoute, resolve } from "./router.js";
 import { renderHeader, mountHeader } from "./components/header.js";
 import { renderFooter } from "./components/footer.js";
-import { renderHome } from "./pages/home.js";
+import { renderHome, mountHome } from "./pages/home.js";
 import { renderCategory } from "./pages/category.js";
 import { renderThread } from "./pages/thread.js";
 import { renderLogin, mountLogin } from "./pages/login.js";
@@ -9,7 +9,7 @@ import { renderRegister, mountRegister } from "./pages/register.js";
 import { renderAdmin, mountAdmin } from "./pages/admin.js";
 
 // Register routes — each returns { html, mount? }
-addRoute("/", () => ({ html: renderHome() }));
+addRoute("/", () => ({ html: renderHome(), mount: mountHome }));
 addRoute("/category/:id", ({ id }) => ({ html: renderCategory(Number(id)) }));
 addRoute("/thread/:id", ({ id }) => ({ html: renderThread(Number(id)) }));
 addRoute("/login", () => ({ html: renderLogin(), mount: mountLogin }));
