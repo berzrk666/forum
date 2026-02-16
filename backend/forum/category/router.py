@@ -9,7 +9,7 @@ from forum.category.service import category_service as cat_srvc
 
 log = logging.getLogger(__name__)
 
-category_router = APIRouter(prefix="/category", tags=["category"])
+category_router = APIRouter(prefix="/categories", tags=["category"])
 
 
 @category_router.post(
