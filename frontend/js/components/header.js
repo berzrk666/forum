@@ -1,12 +1,20 @@
-import { isLoggedIn, getUser, clearToken } from "../state.js";
+import { isLoggedIn, getUser, getRole, clearToken } from "../state.js";
+
+const ADMIN_ROLES = ["Admin", "Moderator"];
 
 export function renderHeader() {
   const loggedIn = isLoggedIn();
   const username = getUser();
+  const role = getRole();
+  const canAccessAdmin = ADMIN_ROLES.includes(role);
+
+  const adminLink = canAccessAdmin
+    ? `<a href="#/admin" class="site-header__link">Admin</a>`
+    : "";
 
   const nav = loggedIn
     ? `<a href="#/" class="site-header__link">Forum Home</a>
-       <a href="#/admin" class="site-header__link">Admin</a>
+       ${adminLink}
        <span class="site-header__link">Welcome, ${username}</span>
        <a href="#" class="site-header__link" id="logout-btn">Log Out</a>`
     : `<a href="#/" class="site-header__link">Forum Home</a>

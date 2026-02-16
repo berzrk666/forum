@@ -1,17 +1,23 @@
 import { renderBreadcrumb } from "../components/breadcrumb.js";
-import { isLoggedIn } from "../state.js";
-import * as api from "../api/admin.js";
+import { isLoggedIn, getRole } from "../state.js";
+import { getUsers } from "../api/admin.js";
+
+const ADMIN_ROLES = ["Admin", "Moderator"];
+
+function canAccessAdmin() {
+  return isLoggedIn() && ADMIN_ROLES.includes(getRole());
+}
 
 export function renderAdmin() {
-  if (!isLoggedIn()) {
+  if (!canAccessAdmin()) {
     return `
       <div class="main-content">
         <div class="form-box">
           <div class="form-box__header">Access Denied</div>
           <div class="form-box__body">
-            <p>You must be logged in to access the admin dashboard.</p>
+            <p>You do not have permission to access the admin dashboard.</p>
             <br>
-            <a href="#/login" class="btn btn--primary">Log In</a>
+            <a href="#/" class="btn btn--primary">Return to Forum</a>
           </div>
         </div>
       </div>
@@ -26,15 +32,64 @@ export function renderAdmin() {
   return `
     ${breadcrumb}
     <div class="main-content">
-      <div class="admin-tabs">
-        <button class="admin-tabs__tab admin-tabs__tab--active" data-tab="roles">Roles</button>
-        <button class="admin-tabs__tab" data-tab="permissions">Permissions</button>
-        <button class="admin-tabs__tab" data-tab="users">Users</button>
-      </div>
-      <div id="admin-content">
-        <div class="form-box" style="max-width:100%;">
-          <div class="form-box__body" style="text-align:center; color: var(--color-text-muted);">
-            Loading...
+      <div class="admin-layout">
+        <nav class="admin-sidebar">
+          <div class="admin-sidebar__section">
+            <div class="admin-sidebar__header">General</div>
+            <div class="admin-sidebar__links">
+              <a class="admin-sidebar__link admin-sidebar__link--active" data-section="dashboard">Dashboard</a>
+              <a class="admin-sidebar__link" data-section="settings">Forum Settings</a>
+              <a class="admin-sidebar__link" data-section="announcements">Announcements</a>
+            </div>
+          </div>
+          <div class="admin-sidebar__section">
+            <div class="admin-sidebar__header">Forums</div>
+            <div class="admin-sidebar__links">
+              <a class="admin-sidebar__link" data-section="categories">Categories</a>
+              <a class="admin-sidebar__link" data-section="forums">Forums</a>
+              <a class="admin-sidebar__link" data-section="forum-order">Forum Ordering</a>
+            </div>
+          </div>
+          <div class="admin-sidebar__section">
+            <div class="admin-sidebar__header">Users</div>
+            <div class="admin-sidebar__links">
+              <a class="admin-sidebar__link" data-section="users">Manage Users</a>
+              <a class="admin-sidebar__link" data-section="roles">Roles</a>
+              <a class="admin-sidebar__link" data-section="permissions">Permissions</a>
+              <a class="admin-sidebar__link" data-section="ranks">User Ranks</a>
+              <a class="admin-sidebar__link" data-section="bans">Bans & Warnings</a>
+            </div>
+          </div>
+          <div class="admin-sidebar__section">
+            <div class="admin-sidebar__header">Moderation</div>
+            <div class="admin-sidebar__links">
+              <a class="admin-sidebar__link" data-section="reports">Reported Content</a>
+              <a class="admin-sidebar__link" data-section="approval">Approval Queue</a>
+              <a class="admin-sidebar__link" data-section="word-filters">Word Filters</a>
+              <a class="admin-sidebar__link" data-section="mod-logs">Moderation Logs</a>
+            </div>
+          </div>
+          <div class="admin-sidebar__section">
+            <div class="admin-sidebar__header">Appearance</div>
+            <div class="admin-sidebar__links">
+              <a class="admin-sidebar__link" data-section="themes">Themes</a>
+              <a class="admin-sidebar__link" data-section="smilies">Smilies</a>
+              <a class="admin-sidebar__link" data-section="bbcode">BBCode</a>
+            </div>
+          </div>
+          <div class="admin-sidebar__section">
+            <div class="admin-sidebar__header">Maintenance</div>
+            <div class="admin-sidebar__links">
+              <a class="admin-sidebar__link" data-section="cache">Cache</a>
+              <a class="admin-sidebar__link" data-section="backups">Backups</a>
+              <a class="admin-sidebar__link" data-section="logs">System Logs</a>
+            </div>
+          </div>
+        </nav>
+        <div class="admin-content" id="admin-content">
+          <div class="admin-content__header">Dashboard</div>
+          <div class="admin-content__body">
+            <div style="text-align:center; color: var(--color-text-muted);">Loading...</div>
           </div>
         </div>
       </div>
@@ -43,433 +98,1040 @@ export function renderAdmin() {
 }
 
 export function mountAdmin() {
-  if (!isLoggedIn()) return;
+  if (!canAccessAdmin()) return;
 
-  let roles = [];
-  let modules = [];
-  let actions = [];
-  let users = [];
-  let activeTab = "roles";
-  let selectedRoleId = null;
-  let rolePermissions = [];
+  let activeSection = "dashboard";
 
-  loadData();
+  document.querySelectorAll(".admin-sidebar__link").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      const section = link.dataset.section;
+      if (section === activeSection) return;
 
-  // Tab switching
-  document.querySelectorAll(".admin-tabs__tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      activeTab = tab.dataset.tab;
-      document.querySelectorAll(".admin-tabs__tab").forEach((t) =>
-        t.classList.remove("admin-tabs__tab--active")
+      document.querySelectorAll(".admin-sidebar__link").forEach((l) =>
+        l.classList.remove("admin-sidebar__link--active")
       );
-      tab.classList.add("admin-tabs__tab--active");
-      selectedRoleId = null;
-      rolePermissions = [];
-      renderActiveTab();
+      link.classList.add("admin-sidebar__link--active");
+
+      activeSection = section;
+      renderSection(section);
     });
   });
 
-  async function loadData() {
-    try {
-      const [rolesData, modulesData, actionsData, usersData] = await Promise.all([
-        api.getRoles().catch(() => []),
-        api.getModules().catch(() => []),
-        api.getActions().catch(() => []),
-        api.getUsers().catch(() => []),
-      ]);
-      roles = Array.isArray(rolesData) ? rolesData : rolesData?.res || [];
-      modules = Array.isArray(modulesData) ? modulesData : modulesData?.res || [];
-      actions = Array.isArray(actionsData) ? actionsData : actionsData?.res || [];
-      users = Array.isArray(usersData) ? usersData : usersData?.res || [];
-    } catch {
-      roles = [];
-      modules = [];
-      actions = [];
-      users = [];
-    }
-    renderActiveTab();
-  }
+  renderSection(activeSection);
+}
 
-  function renderActiveTab() {
-    const container = document.getElementById("admin-content");
-    if (!container) return;
+async function renderSection(section) {
+  const container = document.getElementById("admin-content");
+  if (!container) return;
 
-    if (activeTab === "roles") {
-      container.innerHTML = renderRolesTab();
-      mountRolesTab();
-    } else if (activeTab === "permissions") {
-      container.innerHTML = renderPermissionsTab();
-      mountPermissionsTab();
-    } else if (activeTab === "users") {
-      container.innerHTML = renderUsersTab();
-      mountUsersTab();
-    }
-  }
+  const sections = {
+    // General
+    dashboard: { title: "Dashboard", render: renderDashboard },
+    settings: { title: "Forum Settings", render: renderSettings },
+    announcements: { title: "Announcements", render: renderAnnouncements },
+    // Forums
+    categories: { title: "Categories", render: renderCategories },
+    forums: { title: "Forums", render: renderForums },
+    "forum-order": { title: "Forum Ordering", render: renderPlaceholder },
+    // Users
+    users: { title: "Manage Users", render: renderUsers },
+    roles: { title: "Roles", render: renderRoles },
+    permissions: { title: "Permissions", render: renderPermissions },
+    ranks: { title: "User Ranks", render: renderRanks },
+    bans: { title: "Bans & Warnings", render: renderBans },
+    // Moderation
+    reports: { title: "Reported Content", render: renderReports },
+    approval: { title: "Approval Queue", render: renderApproval },
+    "word-filters": { title: "Word Filters", render: renderWordFilters },
+    "mod-logs": { title: "Moderation Logs", render: renderModLogs },
+    // Appearance
+    themes: { title: "Themes", render: renderThemes },
+    smilies: { title: "Smilies", render: renderPlaceholder },
+    bbcode: { title: "BBCode", render: renderPlaceholder },
+    // Maintenance
+    cache: { title: "Cache Management", render: renderCache },
+    backups: { title: "Backups", render: renderBackups },
+    logs: { title: "System Logs", render: renderPlaceholder },
+  };
 
-  // ── Roles Tab ──
+  const config = sections[section] || sections.dashboard;
 
-  function renderRolesTab() {
-    const rows = roles.map(
-      (r) => `
-      <tr>
-        <td>${r.id}</td>
-        <td>${escapeHtml(r.name)}</td>
-        <td style="text-align:center;">
-          <button class="btn btn--danger btn--sm" data-delete-role="${r.id}">Delete</button>
-        </td>
-      </tr>`
-    ).join("");
+  container.innerHTML = `
+    <div class="admin-content__header">${config.title}</div>
+    <div class="admin-content__body">
+      <div style="text-align:center; color: var(--color-text-muted);">Loading...</div>
+    </div>
+  `;
 
-    return `
-      <div class="category-group">
-        <div class="category-group__header">Roles</div>
-        <div class="forum-table">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:60px;">ID</th>
-                <th>Name</th>
-                <th style="width:80px; text-align:center;">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows || '<tr><td colspan="3" style="text-align:center;">No roles found.</td></tr>'}
-            </tbody>
-          </table>
+  const body = container.querySelector(".admin-content__body");
+  await config.render(body);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GENERAL
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function renderDashboard(container) {
+  try {
+    const data = await getUsers();
+    const users = data.items || [];
+
+    container.innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-box__value">${users.length}</div>
+          <div class="stat-box__label">Users</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box__value">0</div>
+          <div class="stat-box__label">Categories</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box__value">0</div>
+          <div class="stat-box__label">Forums</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box__value">0</div>
+          <div class="stat-box__label">Threads</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box__value">0</div>
+          <div class="stat-box__label">Posts</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box__value">0</div>
+          <div class="stat-box__label">Reports</div>
         </div>
       </div>
-      <div class="form-box" style="max-width:100%; margin-top: var(--spacing-md);">
-        <div class="form-box__header">Add New Role</div>
-        <div class="form-box__body">
-          <div id="role-error" class="form-error" style="display:none;"></div>
-          <form id="add-role-form" style="display:flex; gap: var(--spacing-sm); align-items:flex-end;">
-            <div class="form-group" style="flex:1; margin-bottom:0;">
-              <label for="role-name">Role Name</label>
-              <input type="text" id="role-name" placeholder="e.g. moderator" required>
+
+      <div style="display: flex; gap: var(--spacing-md);">
+        <div style="flex: 1;">
+          <div class="category-group">
+            <div class="category-group__header">Recent Users</div>
+            <div class="forum-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th style="width:120px;">Registered</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${renderUserRowsCompact(users.slice(0, 5))}
+                </tbody>
+              </table>
             </div>
-            <button type="submit" class="btn btn--primary">Add Role</button>
-          </form>
+          </div>
+        </div>
+        <div style="flex: 1;">
+          <div class="category-group">
+            <div class="category-group__header">Recent Activity</div>
+            <div class="forum-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Action</th>
+                    <th style="width:120px;">Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="2" style="text-align:center; color: var(--color-text-muted);">No recent activity</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     `;
+  } catch (err) {
+    container.innerHTML = `<p style="color: var(--color-error);">${escapeHtml(err.message)}</p>`;
   }
+}
 
-  function mountRolesTab() {
-    const form = document.getElementById("add-role-form");
-    if (form) {
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const errorEl = document.getElementById("role-error");
-        const name = document.getElementById("role-name").value.trim();
-        if (!name) return;
-        try {
-          errorEl.style.display = "none";
-          await api.createRole(name);
-          await loadData();
-        } catch (err) {
-          errorEl.textContent = err.message;
-          errorEl.style.display = "block";
-        }
-      });
-    }
-
-    document.querySelectorAll("[data-delete-role]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = btn.dataset.deleteRole;
-        try {
-          await api.deleteRole(id);
-          await loadData();
-        } catch (err) {
-          alert(err.message);
-        }
-      });
-    });
-  }
-
-  // ── Permissions Tab ──
-
-  function renderPermissionsTab() {
-    const roleOptions = roles.map(
-      (r) => `<option value="${r.id}" ${r.id === selectedRoleId ? "selected" : ""}>${escapeHtml(r.name)}</option>`
-    ).join("");
-
-    let matrixHtml = "";
-    if (selectedRoleId) {
-      const actionHeaders = actions.map(
-        (a) => `<th style="width:80px; text-align:center;">${escapeHtml(a.name)}</th>`
-      ).join("");
-
-      const moduleRows = modules.map((m) => {
-        const cells = actions.map((a) => {
-          const checked = rolePermissions.some(
-            (p) => p.module_id === m.id && p.action_id === a.id
-          );
-          return `
-            <td style="text-align:center;">
-              <input type="checkbox" class="perm-checkbox" data-module="${m.id}" data-action="${a.id}" ${checked ? "checked" : ""}>
-            </td>`;
-        }).join("");
-
-        return `<tr><td>${escapeHtml(m.name)}</td>${cells}</tr>`;
-      }).join("");
-
-      matrixHtml = `
-        <div class="category-group" style="margin-top: var(--spacing-md);">
-          <div class="category-group__header">Permissions for: ${escapeHtml(roles.find((r) => r.id === selectedRoleId)?.name || "")}</div>
-          <div class="forum-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Module</th>
-                  ${actionHeaders}
-                </tr>
-              </thead>
-              <tbody>
-                ${moduleRows || '<tr><td colspan="' + (actions.length + 1) + '" style="text-align:center;">No modules defined.</td></tr>'}
-              </tbody>
-            </table>
-          </div>
+function renderSettings(container) {
+  container.innerHTML = `
+    <form class="admin-form">
+      <div class="admin-form__section">
+        <h3 class="admin-form__title">Basic Settings</h3>
+        <div class="form-group">
+          <label>Forum Name</label>
+          <input type="text" value="RetroForum" placeholder="Enter forum name">
         </div>
-      `;
-    }
+        <div class="form-group">
+          <label>Forum Description</label>
+          <textarea rows="3" placeholder="A brief description of your forum">A classic forum for discussions</textarea>
+        </div>
+        <div class="form-group">
+          <label>Site URL</label>
+          <input type="url" value="http://localhost:8080" placeholder="https://example.com">
+        </div>
+      </div>
 
-    // Module rows with delete buttons
-    const moduleRows = modules.map(
-      (m) => `
-      <tr>
-        <td>${escapeHtml(m.name)}</td>
-        <td style="text-align:center;">
-          <button class="btn btn--danger btn--sm" data-delete-module="${m.id}">Delete</button>
-        </td>
-      </tr>`
-    ).join("");
-
-    // Action rows with delete buttons
-    const actionRows = actions.map(
-      (a) => `
-      <tr>
-        <td>${escapeHtml(a.name)}</td>
-        <td style="text-align:center;">
-          <button class="btn btn--danger btn--sm" data-delete-action="${a.id}">Delete</button>
-        </td>
-      </tr>`
-    ).join("");
-
-    return `
-      <div class="action-bar">
-        <h3 style="margin:0;">Manage Permissions</h3>
-        <div class="form-group" style="margin-bottom:0; width:200px;">
-          <select id="perm-role-select" class="admin-select">
-            <option value="">-- Select a Role --</option>
-            ${roleOptions}
+      <div class="admin-form__section">
+        <h3 class="admin-form__title">User Settings</h3>
+        <div class="form-group">
+          <label><input type="checkbox" checked> Allow new registrations</label>
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox"> Require email verification</label>
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox"> Enable CAPTCHA on registration</label>
+        </div>
+        <div class="form-group">
+          <label>Default user role</label>
+          <select class="admin-select">
+            <option>Member</option>
+            <option>Junior Member</option>
           </select>
         </div>
       </div>
-      ${matrixHtml}
-      <div style="display:flex; gap: var(--spacing-md); margin-top: var(--spacing-md);">
-        <div class="form-box" style="max-width:100%; flex:1;">
-          <div class="form-box__header">Modules</div>
-          <div class="form-box__body" style="padding-bottom:0;">
-            <table style="width:100%; margin-bottom: var(--spacing-sm);">
-              <tbody>
-                ${moduleRows || '<tr><td style="text-align:center; color: var(--color-text-muted);">No modules.</td></tr>'}
-              </tbody>
-            </table>
-            <div id="module-error" class="form-error" style="display:none;"></div>
-            <form id="add-module-form" style="display:flex; gap:var(--spacing-sm); align-items:flex-end; padding-bottom: var(--spacing-sm);">
-              <div class="form-group" style="flex:1; margin-bottom:0;">
-                <input type="text" id="module-name" placeholder="e.g. posts" required>
-              </div>
-              <button type="submit" class="btn btn--primary btn--sm">Add</button>
-            </form>
-          </div>
+
+      <div class="admin-form__section">
+        <h3 class="admin-form__title">Posting Settings</h3>
+        <div class="form-group">
+          <label>Minimum posts before links allowed</label>
+          <input type="number" value="5" min="0">
         </div>
-        <div class="form-box" style="max-width:100%; flex:1;">
-          <div class="form-box__header">Actions</div>
-          <div class="form-box__body" style="padding-bottom:0;">
-            <table style="width:100%; margin-bottom: var(--spacing-sm);">
-              <tbody>
-                ${actionRows || '<tr><td style="text-align:center; color: var(--color-text-muted);">No actions.</td></tr>'}
-              </tbody>
-            </table>
-            <div id="action-error" class="form-error" style="display:none;"></div>
-            <form id="add-action-form" style="display:flex; gap:var(--spacing-sm); align-items:flex-end; padding-bottom: var(--spacing-sm);">
-              <div class="form-group" style="flex:1; margin-bottom:0;">
-                <input type="text" id="action-name" placeholder="e.g. read" required>
-              </div>
-              <button type="submit" class="btn btn--primary btn--sm">Add</button>
-            </form>
-          </div>
+        <div class="form-group">
+          <label>Flood control (seconds between posts)</label>
+          <input type="number" value="30" min="0">
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox" checked> Allow signatures</label>
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox" checked> Allow avatars</label>
         </div>
       </div>
-    `;
-  }
 
-  function mountPermissionsTab() {
-    const roleSelect = document.getElementById("perm-role-select");
-    if (roleSelect) {
-      roleSelect.addEventListener("change", async () => {
-        const val = roleSelect.value;
-        if (!val) {
-          selectedRoleId = null;
-          rolePermissions = [];
-          renderActiveTab();
-          return;
-        }
-        selectedRoleId = Number(val);
-        try {
-          const data = await api.getRolePermissions(selectedRoleId);
-          rolePermissions = Array.isArray(data) ? data : data?.res || [];
-        } catch {
-          rolePermissions = [];
-        }
-        renderActiveTab();
-      });
-    }
+      <div class="admin-form__actions">
+        <button type="button" class="btn btn--primary" disabled>Save Settings</button>
+      </div>
+    </form>
+  `;
+}
 
-    // Permission checkboxes
-    document.querySelectorAll(".perm-checkbox").forEach((cb) => {
-      cb.addEventListener("change", async () => {
-        const moduleId = Number(cb.dataset.module);
-        const actionId = Number(cb.dataset.action);
-        try {
-          if (cb.checked) {
-            await api.addPermission(selectedRoleId, moduleId, actionId);
-          } else {
-            await api.removePermission(selectedRoleId, moduleId, actionId);
-          }
-          // Reload permissions to stay in sync
-          const data = await api.getRolePermissions(selectedRoleId);
-          rolePermissions = Array.isArray(data) ? data : data?.res || [];
-        } catch (err) {
-          cb.checked = !cb.checked; // revert on error
-          alert(err.message);
-        }
-      });
-    });
+function renderAnnouncements(container) {
+  container.innerHTML = `
+    <div class="category-group">
+      <div class="category-group__header">Active Announcements</div>
+      <div class="forum-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th style="width:100px;">Type</th>
+              <th style="width:120px;">Created</th>
+              <th style="width:100px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="4" style="text-align:center; color: var(--color-text-muted);">No announcements</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-    // Add module
-    const moduleForm = document.getElementById("add-module-form");
-    if (moduleForm) {
-      moduleForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const errorEl = document.getElementById("module-error");
-        const name = document.getElementById("module-name").value.trim();
-        if (!name) return;
-        try {
-          errorEl.style.display = "none";
-          await api.createModule(name);
-          await loadData();
-        } catch (err) {
-          errorEl.textContent = err.message;
-          errorEl.style.display = "block";
-        }
-      });
-    }
+    <div class="form-box" style="max-width:100%; margin-top: var(--spacing-md);">
+      <div class="form-box__header">Create Announcement</div>
+      <div class="form-box__body">
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" placeholder="Announcement title">
+        </div>
+        <div class="form-group">
+          <label>Content</label>
+          <textarea rows="4" placeholder="Announcement content..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Type</label>
+          <select class="admin-select" style="width:200px;">
+            <option>Info</option>
+            <option>Warning</option>
+            <option>Important</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox"> Show on all pages</label>
+        </div>
+        <button type="button" class="btn btn--primary" disabled>Create Announcement</button>
+      </div>
+    </div>
+  `;
+}
 
-    // Add action
-    const actionForm = document.getElementById("add-action-form");
-    if (actionForm) {
-      actionForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const errorEl = document.getElementById("action-error");
-        const name = document.getElementById("action-name").value.trim();
-        if (!name) return;
-        try {
-          errorEl.style.display = "none";
-          await api.createAction(name);
-          await loadData();
-        } catch (err) {
-          errorEl.textContent = err.message;
-          errorEl.style.display = "block";
-        }
-      });
-    }
+// ═══════════════════════════════════════════════════════════════════════════
+// FORUMS
+// ═══════════════════════════════════════════════════════════════════════════
 
-    // Delete module
-    document.querySelectorAll("[data-delete-module]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        try {
-          await api.deleteModule(btn.dataset.deleteModule);
-          await loadData();
-        } catch (err) {
-          alert(err.message);
-        }
-      });
-    });
+function renderCategories(container) {
+  container.innerHTML = `
+    <div class="category-group">
+      <div class="category-group__header">Forum Categories</div>
+      <div class="forum-table">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:50px;">Order</th>
+              <th>Name</th>
+              <th style="width:80px;">Forums</th>
+              <th style="width:120px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="4" style="text-align:center; color: var(--color-text-muted);">No categories configured</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-    // Delete action
-    document.querySelectorAll("[data-delete-action]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        try {
-          await api.deleteAction(btn.dataset.deleteAction);
-          await loadData();
-        } catch (err) {
-          alert(err.message);
-        }
-      });
-    });
-  }
+    <div class="form-box" style="max-width:100%; margin-top: var(--spacing-md);">
+      <div class="form-box__header">Add Category</div>
+      <div class="form-box__body">
+        <div style="display:flex; gap: var(--spacing-sm); align-items:flex-end;">
+          <div class="form-group" style="flex:1; margin-bottom:0;">
+            <label>Category Name</label>
+            <input type="text" placeholder="e.g. General Discussion">
+          </div>
+          <button type="button" class="btn btn--primary" disabled>Add Category</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
 
-  // ── Users Tab ──
+function renderForums(container) {
+  container.innerHTML = `
+    <div class="category-group">
+      <div class="category-group__header">Forums</div>
+      <div class="forum-table">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:50px;">Order</th>
+              <th>Name</th>
+              <th>Category</th>
+              <th style="width:70px;">Threads</th>
+              <th style="width:70px;">Posts</th>
+              <th style="width:120px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="6" style="text-align:center; color: var(--color-text-muted);">No forums configured</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-  function renderUsersTab() {
-    const rows = users.map((u) => {
-      const roleOptions = roles.map(
-        (r) => `<option value="${r.id}" ${u.role_id === r.id ? "selected" : ""}>${escapeHtml(r.name)}</option>`
-      ).join("");
+    <div class="form-box" style="max-width:100%; margin-top: var(--spacing-md);">
+      <div class="form-box__header">Add Forum</div>
+      <div class="form-box__body">
+        <div class="form-group">
+          <label>Forum Name</label>
+          <input type="text" placeholder="e.g. Introductions">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" placeholder="Brief description of this forum">
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select class="admin-select" style="width:200px;">
+            <option>-- Select Category --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox"> Require moderator approval for new threads</label>
+        </div>
+        <button type="button" class="btn btn--primary" disabled>Add Forum</button>
+      </div>
+    </div>
+  `;
+}
 
-      return `
-        <tr>
-          <td>${u.id}</td>
-          <td>${escapeHtml(u.username)}</td>
-          <td>${escapeHtml(u.email || "")}</td>
-          <td>
-            <select class="admin-select" data-user-id="${u.id}">
-              <option value="" ${!u.role_id ? "selected" : ""}>-- No Role --</option>
-              ${roleOptions}
-            </select>
-          </td>
-        </tr>`;
-    }).join("");
+// ═══════════════════════════════════════════════════════════════════════════
+// USERS
+// ═══════════════════════════════════════════════════════════════════════════
 
-    return `
+async function renderUsers(container) {
+  try {
+    const data = await getUsers();
+    const users = data.items || [];
+
+    container.innerHTML = `
+      <div class="admin-toolbar">
+        <div class="admin-toolbar__search">
+          <input type="text" placeholder="Search users..." class="admin-search">
+        </div>
+        <div class="admin-toolbar__actions">
+          <button class="btn btn--primary btn--sm" disabled>Add User</button>
+        </div>
+      </div>
+
       <div class="category-group">
-        <div class="category-group__header">User Role Assignments</div>
+        <div class="category-group__header">All Users (${users.length})</div>
         <div class="forum-table">
           <table>
             <thead>
               <tr>
-                <th style="width:60px;">ID</th>
                 <th>Username</th>
                 <th>Email</th>
-                <th style="width:180px;">Role</th>
+                <th style="width:100px;">Role</th>
+                <th style="width:80px;">Posts</th>
+                <th style="width:120px;">Registered</th>
+                <th style="width:140px; text-align:center;">Actions</th>
               </tr>
             </thead>
             <tbody>
-              ${rows || '<tr><td colspan="4" style="text-align:center;">No users found.</td></tr>'}
+              ${users.map((user) => `
+                <tr>
+                  <td><strong>${escapeHtml(user.username)}</strong></td>
+                  <td>${escapeHtml(user.email)}</td>
+                  <td><span class="admin-badge">Member</span></td>
+                  <td>0</td>
+                  <td>${formatDate(user.created_at)}</td>
+                  <td style="text-align:center;">
+                    <button class="btn btn--sm" disabled>Edit</button>
+                    <button class="btn btn--sm btn--danger" disabled>Ban</button>
+                  </td>
+                </tr>
+              `).join("") || '<tr><td colspan="6" style="text-align:center;">No users found.</td></tr>'}
             </tbody>
           </table>
         </div>
       </div>
     `;
+  } catch (err) {
+    container.innerHTML = `<p style="color: var(--color-error);">${escapeHtml(err.message)}</p>`;
   }
+}
 
-  function mountUsersTab() {
-    document.querySelectorAll("select[data-user-id]").forEach((sel) => {
-      sel.addEventListener("change", async () => {
-        const userId = sel.dataset.userId;
-        const roleId = sel.value ? Number(sel.value) : null;
-        try {
-          await api.assignUserRole(userId, roleId);
-        } catch (err) {
-          alert(err.message);
-          // Revert — reload data
-          await loadData();
-        }
-      });
-    });
+function renderRoles(container) {
+  container.innerHTML = `
+    <div class="category-group">
+      <div class="category-group__header">Roles</div>
+      <div class="forum-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Role Name</th>
+              <th style="width:80px;">Users</th>
+              <th style="width:100px;">Priority</th>
+              <th style="width:120px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="admin-badge admin-badge--admin">Admin</span> Administrator</td>
+              <td>1</td>
+              <td>100</td>
+              <td style="text-align:center;">
+                <button class="btn btn--sm" disabled>Edit</button>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="admin-badge admin-badge--mod">Mod</span> Moderator</td>
+              <td>0</td>
+              <td>50</td>
+              <td style="text-align:center;">
+                <button class="btn btn--sm" disabled>Edit</button>
+                <button class="btn btn--sm btn--danger" disabled>Delete</button>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="admin-badge">Member</span> Member</td>
+              <td>0</td>
+              <td>10</td>
+              <td style="text-align:center;">
+                <button class="btn btn--sm" disabled>Edit</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="form-box" style="max-width:100%; margin-top: var(--spacing-md);">
+      <div class="form-box__header">Add Role</div>
+      <div class="form-box__body">
+        <div style="display:flex; gap: var(--spacing-sm); align-items:flex-end;">
+          <div class="form-group" style="flex:1; margin-bottom:0;">
+            <label>Role Name</label>
+            <input type="text" placeholder="e.g. VIP Member">
+          </div>
+          <div class="form-group" style="width:100px; margin-bottom:0;">
+            <label>Priority</label>
+            <input type="number" value="20" min="1" max="99">
+          </div>
+          <button type="button" class="btn btn--primary" disabled>Add Role</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderPermissions(container) {
+  container.innerHTML = `
+    <div class="form-group" style="margin-bottom: var(--spacing-md);">
+      <label>Select Role</label>
+      <select class="admin-select" style="width:200px;">
+        <option>-- Select Role --</option>
+        <option>Administrator</option>
+        <option>Moderator</option>
+        <option>Member</option>
+      </select>
+    </div>
+
+    <div class="category-group">
+      <div class="category-group__header">Forum Permissions</div>
+      <div class="forum-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Permission</th>
+              <th style="width:80px; text-align:center;">View</th>
+              <th style="width:80px; text-align:center;">Create</th>
+              <th style="width:80px; text-align:center;">Edit</th>
+              <th style="width:80px; text-align:center;">Delete</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Threads</td>
+              <td style="text-align:center;"><input type="checkbox" checked disabled></td>
+              <td style="text-align:center;"><input type="checkbox" checked disabled></td>
+              <td style="text-align:center;"><input type="checkbox" disabled></td>
+              <td style="text-align:center;"><input type="checkbox" disabled></td>
+            </tr>
+            <tr>
+              <td>Posts</td>
+              <td style="text-align:center;"><input type="checkbox" checked disabled></td>
+              <td style="text-align:center;"><input type="checkbox" checked disabled></td>
+              <td style="text-align:center;"><input type="checkbox" checked disabled></td>
+              <td style="text-align:center;"><input type="checkbox" disabled></td>
+            </tr>
+            <tr>
+              <td>Attachments</td>
+              <td style="text-align:center;"><input type="checkbox" checked disabled></td>
+              <td style="text-align:center;"><input type="checkbox" disabled></td>
+              <td style="text-align:center;"><input type="checkbox" disabled></td>
+              <td style="text-align:center;"><input type="checkbox" disabled></td>
+            </tr>
+            <tr>
+              <td>Private Messages</td>
+              <td style="text-align:center;"><input type="checkbox" checked disabled></td>
+              <td style="text-align:center;"><input type="checkbox" checked disabled></td>
+              <td style="text-align:center;"><input type="checkbox" disabled></td>
+              <td style="text-align:center;"><input type="checkbox" disabled></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="category-group" style="margin-top: var(--spacing-md);">
+      <div class="category-group__header">Moderation Permissions</div>
+      <div class="forum-table">
+        <table>
+          <tbody>
+            <tr>
+              <td><input type="checkbox" disabled> Can lock threads</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" disabled> Can pin threads</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" disabled> Can move threads</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" disabled> Can edit any post</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" disabled> Can delete any post</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" disabled> Can ban users</td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" disabled> Can view reports</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="admin-form__actions" style="margin-top: var(--spacing-md);">
+      <button type="button" class="btn btn--primary" disabled>Save Permissions</button>
+    </div>
+  `;
+}
+
+function renderRanks(container) {
+  container.innerHTML = `
+    <p style="margin-bottom: var(--spacing-md); color: var(--color-text-light);">
+      User ranks are titles automatically assigned based on post count.
+    </p>
+
+    <div class="category-group">
+      <div class="category-group__header">User Ranks</div>
+      <div class="forum-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Rank Title</th>
+              <th style="width:120px;">Min Posts</th>
+              <th style="width:120px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Newbie</td>
+              <td>0</td>
+              <td style="text-align:center;">
+                <button class="btn btn--sm" disabled>Edit</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Junior Member</td>
+              <td>10</td>
+              <td style="text-align:center;">
+                <button class="btn btn--sm" disabled>Edit</button>
+                <button class="btn btn--sm btn--danger" disabled>Delete</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Member</td>
+              <td>50</td>
+              <td style="text-align:center;">
+                <button class="btn btn--sm" disabled>Edit</button>
+                <button class="btn btn--sm btn--danger" disabled>Delete</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Senior Member</td>
+              <td>200</td>
+              <td style="text-align:center;">
+                <button class="btn btn--sm" disabled>Edit</button>
+                <button class="btn btn--sm btn--danger" disabled>Delete</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Veteran</td>
+              <td>500</td>
+              <td style="text-align:center;">
+                <button class="btn btn--sm" disabled>Edit</button>
+                <button class="btn btn--sm btn--danger" disabled>Delete</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="form-box" style="max-width:100%; margin-top: var(--spacing-md);">
+      <div class="form-box__header">Add Rank</div>
+      <div class="form-box__body">
+        <div style="display:flex; gap: var(--spacing-sm); align-items:flex-end;">
+          <div class="form-group" style="flex:1; margin-bottom:0;">
+            <label>Rank Title</label>
+            <input type="text" placeholder="e.g. Elite Member">
+          </div>
+          <div class="form-group" style="width:120px; margin-bottom:0;">
+            <label>Min Posts</label>
+            <input type="number" value="100" min="0">
+          </div>
+          <button type="button" class="btn btn--primary" disabled>Add Rank</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderBans(container) {
+  container.innerHTML = `
+    <div class="category-group">
+      <div class="category-group__header">Active Bans</div>
+      <div class="forum-table">
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Reason</th>
+              <th style="width:100px;">Type</th>
+              <th style="width:120px;">Expires</th>
+              <th style="width:100px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="5" style="text-align:center; color: var(--color-text-muted);">No active bans</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="category-group" style="margin-top: var(--spacing-md);">
+      <div class="category-group__header">IP Bans</div>
+      <div class="forum-table">
+        <table>
+          <thead>
+            <tr>
+              <th>IP Address</th>
+              <th>Reason</th>
+              <th style="width:120px;">Created</th>
+              <th style="width:100px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="4" style="text-align:center; color: var(--color-text-muted);">No IP bans</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="form-box" style="max-width:100%; margin-top: var(--spacing-md);">
+      <div class="form-box__header">Ban User</div>
+      <div class="form-box__body">
+        <div class="form-group">
+          <label>Username or IP</label>
+          <input type="text" placeholder="Enter username or IP address">
+        </div>
+        <div class="form-group">
+          <label>Reason</label>
+          <input type="text" placeholder="Reason for ban">
+        </div>
+        <div class="form-group">
+          <label>Duration</label>
+          <select class="admin-select" style="width:200px;">
+            <option>Permanent</option>
+            <option>1 Day</option>
+            <option>3 Days</option>
+            <option>1 Week</option>
+            <option>2 Weeks</option>
+            <option>1 Month</option>
+            <option>3 Months</option>
+          </select>
+        </div>
+        <button type="button" class="btn btn--danger" disabled>Ban User</button>
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODERATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+function renderReports(container) {
+  container.innerHTML = `
+    <div class="admin-toolbar">
+      <div class="admin-toolbar__filter">
+        <select class="admin-select" style="width:150px;">
+          <option>All Reports</option>
+          <option>Open</option>
+          <option>Resolved</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="category-group">
+      <div class="category-group__header">Reported Content</div>
+      <div class="forum-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Content</th>
+              <th style="width:100px;">Reported By</th>
+              <th>Reason</th>
+              <th style="width:100px;">Status</th>
+              <th style="width:120px;">Date</th>
+              <th style="width:140px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="6" style="text-align:center; color: var(--color-text-muted);">No reports</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderApproval(container) {
+  container.innerHTML = `
+    <div class="category-group">
+      <div class="category-group__header">Posts Awaiting Approval</div>
+      <div class="forum-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Author</th>
+              <th>Content Preview</th>
+              <th style="width:100px;">Type</th>
+              <th style="width:120px;">Submitted</th>
+              <th style="width:140px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="5" style="text-align:center; color: var(--color-text-muted);">No posts awaiting approval</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderWordFilters(container) {
+  container.innerHTML = `
+    <p style="margin-bottom: var(--spacing-md); color: var(--color-text-light);">
+      Word filters automatically censor or block posts containing specified words.
+    </p>
+
+    <div class="category-group">
+      <div class="category-group__header">Word Filters</div>
+      <div class="forum-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Word/Pattern</th>
+              <th>Replacement</th>
+              <th style="width:100px;">Action</th>
+              <th style="width:100px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="4" style="text-align:center; color: var(--color-text-muted);">No word filters configured</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="form-box" style="max-width:100%; margin-top: var(--spacing-md);">
+      <div class="form-box__header">Add Word Filter</div>
+      <div class="form-box__body">
+        <div style="display:flex; gap: var(--spacing-sm); align-items:flex-end;">
+          <div class="form-group" style="flex:1; margin-bottom:0;">
+            <label>Word/Pattern</label>
+            <input type="text" placeholder="Word to filter">
+          </div>
+          <div class="form-group" style="flex:1; margin-bottom:0;">
+            <label>Replacement</label>
+            <input type="text" placeholder="****">
+          </div>
+          <div class="form-group" style="width:150px; margin-bottom:0;">
+            <label>Action</label>
+            <select class="admin-select">
+              <option>Replace</option>
+              <option>Block Post</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn--primary" disabled>Add Filter</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderModLogs(container) {
+  container.innerHTML = `
+    <div class="admin-toolbar">
+      <div class="admin-toolbar__filter">
+        <select class="admin-select" style="width:150px;">
+          <option>All Actions</option>
+          <option>Bans</option>
+          <option>Deletions</option>
+          <option>Edits</option>
+          <option>Moves</option>
+        </select>
+        <select class="admin-select" style="width:150px;">
+          <option>All Moderators</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="category-group">
+      <div class="category-group__header">Moderation Logs</div>
+      <div class="forum-table">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:120px;">Moderator</th>
+              <th>Action</th>
+              <th>Target</th>
+              <th style="width:150px;">Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="4" style="text-align:center; color: var(--color-text-muted);">No moderation actions logged</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// APPEARANCE
+// ═══════════════════════════════════════════════════════════════════════════
+
+function renderThemes(container) {
+  container.innerHTML = `
+    <div class="category-group">
+      <div class="category-group__header">Available Themes</div>
+      <div class="forum-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Theme</th>
+              <th style="width:100px;">Status</th>
+              <th style="width:140px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>RetroForum Classic</strong> <span class="admin-badge">Default</span></td>
+              <td><span style="color: var(--color-success);">Active</span></td>
+              <td style="text-align:center;">
+                <button class="btn btn--sm" disabled>Preview</button>
+              </td>
+            </tr>
+            <tr>
+              <td>RetroForum Dark</td>
+              <td><span style="color: var(--color-text-muted);">Inactive</span></td>
+              <td style="text-align:center;">
+                <button class="btn btn--sm" disabled>Preview</button>
+                <button class="btn btn--sm btn--primary" disabled>Activate</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="form-box" style="max-width:100%; margin-top: var(--spacing-md);">
+      <div class="form-box__header">Custom CSS</div>
+      <div class="form-box__body">
+        <div class="form-group">
+          <label>Additional CSS (appended to active theme)</label>
+          <textarea rows="8" placeholder="/* Custom CSS here */" style="font-family: monospace;"></textarea>
+        </div>
+        <button type="button" class="btn btn--primary" disabled>Save CSS</button>
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAINTENANCE
+// ═══════════════════════════════════════════════════════════════════════════
+
+function renderCache(container) {
+  container.innerHTML = `
+    <div class="stats-grid" style="margin-bottom: var(--spacing-lg);">
+      <div class="stat-box">
+        <div class="stat-box__value">--</div>
+        <div class="stat-box__label">Cache Size</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box__value">--</div>
+        <div class="stat-box__label">Cache Entries</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box__value">--</div>
+        <div class="stat-box__label">Hit Rate</div>
+      </div>
+    </div>
+
+    <div class="category-group">
+      <div class="category-group__header">Cache Operations</div>
+      <div class="admin-content__body" style="border: 1px solid var(--color-border); border-top: none;">
+        <p>Clear cached data to resolve stale content issues.</p>
+        <div style="display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-md);">
+          <button class="btn btn--primary" disabled>Clear Template Cache</button>
+          <button class="btn btn--primary" disabled>Clear Permission Cache</button>
+          <button class="btn btn--danger" disabled>Clear All Cache</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderBackups(container) {
+  container.innerHTML = `
+    <div class="category-group">
+      <div class="category-group__header">Database Backups</div>
+      <div class="forum-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Filename</th>
+              <th style="width:100px;">Size</th>
+              <th style="width:150px;">Created</th>
+              <th style="width:140px; text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="4" style="text-align:center; color: var(--color-text-muted);">No backups available</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="form-box" style="max-width:100%; margin-top: var(--spacing-md);">
+      <div class="form-box__header">Create Backup</div>
+      <div class="form-box__body">
+        <p style="margin-bottom: var(--spacing-md);">Create a backup of the forum database. This may take a few minutes for large forums.</p>
+        <div class="form-group">
+          <label><input type="checkbox" checked> Include user data</label>
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox" checked> Include posts and threads</label>
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox"> Include attachments</label>
+        </div>
+        <button type="button" class="btn btn--primary" disabled>Create Backup</button>
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function renderPlaceholder(container) {
+  container.innerHTML = `
+    <div class="admin-placeholder">
+      <div class="admin-placeholder__icon">&#128736;</div>
+      <div class="admin-placeholder__text">
+        This feature is not yet implemented.<br>
+        Backend API endpoints needed.
+      </div>
+    </div>
+  `;
+}
+
+function renderUserRowsCompact(users) {
+  if (!users.length) {
+    return '<tr><td colspan="2" style="text-align:center; color: var(--color-text-muted);">No users found.</td></tr>';
   }
+  return users.map((user) => `
+    <tr>
+      <td>${escapeHtml(user.username)}</td>
+      <td>${formatDate(user.created_at)}</td>
+    </tr>
+  `).join("");
+}
+
+function formatDate(isoString) {
+  const date = new Date(isoString);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function escapeHtml(str) {
