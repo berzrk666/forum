@@ -17,13 +17,15 @@ sessionlocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Get database session with auto-commit."""
-    async with sessionlocal() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
+    session = sessionlocal()
+    try:
+        yield session
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
 
 
 DbSession = Annotated[AsyncSession, Depends(get_db)]
