@@ -6,7 +6,7 @@ from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 
 from forum.auth.dependencies import (
     CurrentUser,
-    moderator_user,
+    get_moderator_user,
 )
 from forum.auth.exceptions import (
     EmailAlreadyExists,
@@ -76,7 +76,7 @@ async def register_user(db_session: DbSession, user_in: UserCreate):
 
 
 @user_router.get(
-    "/", response_model=UserPagination, dependencies=[Depends(moderator_user)]
+    "/", response_model=UserPagination, dependencies=[Depends(get_moderator_user)]
 )
 async def read_users(db_session: DbSession):
     try:
