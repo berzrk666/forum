@@ -1,7 +1,8 @@
 import logging
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from forum.auth.dependencies import get_admin_user
 from forum.category.exceptions import CategoryAlreadyExists
 from forum.category.schemas import CategoryCreate, CategoryPagination, CategoryRead
 from forum.database.core import DbSession
@@ -13,7 +14,10 @@ category_router = APIRouter(prefix="/categories", tags=["category"])
 
 
 @category_router.post(
-    "/", response_model=CategoryRead, status_code=status.HTTP_201_CREATED
+    "/",
+    response_model=CategoryRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(get_admin_user)],
 )
 async def create_category(db_session: DbSession, category_in: CategoryCreate):
     """Create a Category."""
@@ -31,12 +35,15 @@ async def create_category(db_session: DbSession, category_in: CategoryCreate):
         )
 
 
-@category_router.get("/", response_model=CategoryPagination)
+@category_router.get(
+    "/", response_model=CategoryPagination, dependencies=[Depends(get_admin_user)]
+)
 async def get_categories(db_session: DbSession):
     """Get list of categories."""
     try:
         cats = await cat_srvc.list(db_session)
-        return cats
+        data = [CategoryRead.model_validate(c) for c in cats]
+        return CategoryPagination(data=data)
     except Exception:
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
