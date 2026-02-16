@@ -1,13 +1,13 @@
 import logging
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from forum.auth.models import Role
-from forum.database.core import DbSession
 
 log = logging.getLogger(__name__)
 
 
-async def init_roles(session: DbSession):
+async def init_roles(session: AsyncSession):
     res = await session.scalar(select(Role))
     if res is None:
         role = Role(name="User")

@@ -19,7 +19,8 @@ async def lifespan(app: FastAPI):
     log.info("Starting Forum API")
 
     app.state.cache = redis.Redis(connection_pool=get_cache_pool())
-    await utils.init_roles(sessionlocal())
+    async with sessionlocal() as session:
+        await utils.init_roles(session)
 
     # before
     yield
