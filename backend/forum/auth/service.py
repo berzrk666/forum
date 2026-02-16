@@ -85,7 +85,7 @@ class AuthService:
     async def list_users(self, session: AsyncSession) -> tuple[list[User], int]:
         """List all users."""
         try:
-            st = select(User)
+            st = select(User).options(joinedload(User.role))
             count_st = select(func.count()).select_from(User)
             res = await session.scalars(st)
             total = await session.scalar(count_st) or 0
