@@ -4,7 +4,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 
-from forum.auth.dependencies import CurrentUser, ModeratorUser, PermissionDependency
+from forum.auth.dependencies import (
+    CurrentUser,
+    moderator_user,
+)
 from forum.auth.exceptions import (
     EmailAlreadyExists,
     IncorrectPasswordOrUsername,
@@ -72,8 +75,10 @@ async def register_user(db_session: DbSession, user_in: UserCreate):
         )
 
 
-@user_router.get("/", response_model=UserPagination)
-async def read_users(db_session: DbSession, moderator: ModeratorUser):
+@user_router.get(
+    "/", response_model=UserPagination, dependencies=[Depends(moderator_user)]
+)
+async def read_users(db_session: DbSession):
     try:
         users, total = await auth_service.list_users(db_session)
         users_read = [UserRead.model_validate(u) for u in users]
