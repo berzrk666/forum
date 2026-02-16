@@ -127,7 +127,7 @@ class AuthService:
         try:
             session.add(user)
             await session.flush()
-            await session.refresh(user)
+            await session.refresh(user, ["role"])
             return user
         except IntegrityError as e:
             detail = str(e.orig)
