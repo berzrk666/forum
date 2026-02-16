@@ -6,6 +6,7 @@ from sqlalchemy import pool
 from alembic import context
 from forum.database.core import Base
 from forum.auth.models import User
+from forum.category.models import Category
 from forum.config import settings
 
 # this is the Alembic Config object, which provides
