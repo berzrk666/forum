@@ -123,3 +123,27 @@ class TestCategoryServiceList:
         assert len(res) == 3
         assert res[0].order == 1
         assert res[-1].order == 3
+
+
+class TestCategoryDelete:
+    async def test_delete_success(self, cat_service: CategoryService, test_session):
+        """Delete category works."""
+        sample = CategoryCreate(name="General", order=1)
+        sample = await cat_service.create(test_session, sample)
+
+        await cat_service.delete(test_session, sample.id)
+
+        res = await cat_service.list(test_session)
+        assert len(res) == 0
+
+    async def test_delete_nonexistent_category(
+        self, cat_service: CategoryService, test_session
+    ):
+        """Delete category that doesn't exist should just do nothing."""
+        sample = CategoryCreate(name="General", order=1)
+        sample = await cat_service.create(test_session, sample)
+
+        await cat_service.delete(test_session, 2)
+
+        res = await cat_service.list(test_session)
+        assert len(res) == 1

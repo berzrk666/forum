@@ -13,6 +13,7 @@ class CategoryCreate(CategoryBase):
 
 
 class CategoryRead(CategoryBase):
+    id: int
     order: PositiveInt
 
 

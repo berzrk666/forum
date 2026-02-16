@@ -48,3 +48,18 @@ async def get_categories(db_session: DbSession):
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
         )
+
+
+@category_router.delete(
+    "/{id}",
+    dependencies=[Depends(get_admin_user)],
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_category(db_session: DbSession, id: int):
+    """Delete a Category."""
+    try:
+        await cat_srvc.delete(db_session, id)
+    except Exception:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
+        )

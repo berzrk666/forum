@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import func, select
+from sqlalchemy.sql import delete, func, select
 
 from forum.category.exceptions import CategoryAlreadyExists
 from forum.category.models import Category
@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 class CategoryService:
     async def create(self, session: AsyncSession, data_in: CategoryCreate) -> Category:
-        """Create a new Category."""
+        """Create a new Category in the database."""
         try:
             if data_in.order is None:
                 max_order = await session.scalar(func.max(Category.order))
@@ -37,6 +37,15 @@ class CategoryService:
             return res.all()  # type: ignore
         except Exception as e:
             log.error(f"Unexpected error when listing categories: {e}")
+            raise
+
+    async def delete(self, session: AsyncSession, id: int):
+        """Delete a Category from the database."""
+        try:
+            st = delete(Category).where(Category.id == id)
+            await session.execute(st)
+        except Exception as e:
+            log.error(f"Unexpected error when DELETING category with ID={id}: {e}")
             raise
 
 
