@@ -6,6 +6,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import Integer, LargeBinary, String
 
+from forum.auth.schemas import TokenData
 from forum.config import settings
 from forum.database.core import Base, TimestampMixin
 
@@ -49,8 +50,8 @@ class User(Base, TimestampMixin):
     def token(self) -> str:
         """Generate a JWT Token for the User."""
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRATION)
-        to_encode = {"exp": expire, "sub": self.username}
-        return jwt.encode(to_encode, settings.JWT_KEY, settings.JWT_ALG)
+        to_encode = TokenData(sub=self.username, exp=expire, role=self.role.name)
+        return jwt.encode(to_encode.model_dump(), settings.JWT_KEY, settings.JWT_ALG)
 
     def __repr__(self) -> str:
         return f"User=(id={self.id!r}, username={self.username!r}, created_at={self.created_at!r}, updated_at={self.updated_at!r})"
