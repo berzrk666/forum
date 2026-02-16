@@ -35,9 +35,7 @@ async def create_category(db_session: DbSession, category_in: CategoryCreate):
         )
 
 
-@category_router.get(
-    "/", response_model=CategoryPagination, dependencies=[Depends(get_admin_user)]
-)
+@category_router.get("/", response_model=CategoryPagination)
 async def get_categories(db_session: DbSession):
     """Get list of categories."""
     try:
