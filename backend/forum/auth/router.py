@@ -73,8 +73,15 @@ async def register_user(db_session: DbSession, user_in: UserCreate):
 
 
 @user_router.get("/", response_model=UserPagination)
-async def read_users(moderator: ModeratorUser):
-    pass
+async def read_users(db_session: DbSession, moderator: ModeratorUser):
+    try:
+        users, total = await auth_service.list_users(db_session)
+        users_read = [UserRead.model_validate(u) for u in users]
+        return UserPagination(itemPerPage=total, page=1, total=total, items=users_read)
+    except Exception:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
+        )
 
 
 @user_router.get("/me")
