@@ -21,46 +21,76 @@ export async function mountHome() {
   const container = document.getElementById("home-content");
   if (!container) return;
 
-  // Fetch real categories
   let realCategories = [];
+  let realForums = [];
   try {
-    const data = await fetchAPI("/categories/");
-    realCategories = data.data || [];
+    const [catData, forumData] = await Promise.all([
+      fetchAPI("/categories/"),
+      fetchAPI("/forums/"),
+    ]);
+    realCategories = catData.data || [];
+    realForums = forumData.data || [];
   } catch (err) {
-    console.error("Failed to load categories:", err);
+    console.error("Failed to load data:", err);
   }
 
-  // Get sample categories
-  const sampleCategories = getCategoryForums();
+  // Group forums by category name
+  const forumsByCategory = {};
+  for (const forum of realForums) {
+    const catName = forum.category.name;
+    if (!forumsByCategory[catName]) {
+      forumsByCategory[catName] = [];
+    }
+    forumsByCategory[catName].push(forum);
+  }
 
-  // Render real categories (no forums yet)
-  const realGroups = realCategories.map((cat) => `
-    <div class="category-group">
-      <div class="category-group__header">${escapeHtml(cat.name)}</div>
-      <div class="forum-table">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:30px"></th>
-              <th>Forum</th>
-              <th style="width:70px">Threads</th>
-              <th style="width:70px">Posts</th>
-              <th style="width:180px">Last Post</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colspan="5" style="text-align:center; color: var(--color-text-muted); padding: var(--spacing-md);">
-                No forums in this category yet
-              </td>
-            </tr>
-          </tbody>
-        </table>
+  // Render real categories with their forums
+  const realGroups = realCategories.map((cat) => {
+    const forums = forumsByCategory[cat.name] || [];
+    const forumRows = forums.length > 0
+      ? forums.map((forum) => `
+          <tr>
+            <td class="forum-table__icon">&#128172;</td>
+            <td class="forum-table__title">
+              <a href="#/forum/${forum.order}">${escapeHtml(forum.name)}</a>
+              <div class="forum-table__description">${escapeHtml(forum.description)}</div>
+            </td>
+            <td class="forum-table__stat">0</td>
+            <td class="forum-table__stat">0</td>
+            <td class="forum-table__lastpost" style="color: var(--color-text-muted);">No posts yet</td>
+          </tr>
+        `).join("")
+      : `<tr>
+          <td colspan="5" style="text-align:center; color: var(--color-text-muted); padding: var(--spacing-md);">
+            No forums in this category yet
+          </td>
+        </tr>`;
+
+    return `
+      <div class="category-group">
+        <div class="category-group__header">${escapeHtml(cat.name)}</div>
+        <div class="forum-table">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:30px"></th>
+                <th>Forum</th>
+                <th style="width:70px">Threads</th>
+                <th style="width:70px">Posts</th>
+                <th style="width:180px">Last Post</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${forumRows}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  `).join("");
+    `;
+  }).join("");
 
-  // Render sample categories
+  // Sample categories as fallback
+  const sampleCategories = getCategoryForums();
   const sampleGroups = sampleCategories.map((cat) => {
     const rows = cat.forums
       .map(

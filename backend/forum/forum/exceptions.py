@@ -1,0 +1,2 @@
+class CategoryDoesNotExist(Exception):
+    pass

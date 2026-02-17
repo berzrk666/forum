@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from "../components/breadcrumb.js";
 import { isLoggedIn, getRole } from "../state.js";
-import { getUsers, getCategories, createCategory, deleteCategory } from "../api/admin.js";
+import { getUsers, getCategories, createCategory, deleteCategory, getForums, createForum } from "../api/admin.js";
 
 const ADMIN_ROLES = ["Admin", "Moderator"];
 
@@ -506,7 +506,37 @@ async function renderCategories(container) {
   });
 }
 
-function renderForums(container) {
+async function renderForums(container) {
+  let forums = [];
+  let categories = [];
+  try {
+    const [forumsData, categoriesData] = await Promise.all([getForums(), getCategories()]);
+    forums = forumsData.data || [];
+    categories = categoriesData.data || [];
+  } catch (err) {
+    container.innerHTML = `<p style="color: var(--color-error);">${escapeHtml(err.message)}</p>`;
+    return;
+  }
+
+  const forumRows = forums.length > 0
+    ? forums.map((forum) => `
+        <tr>
+          <td>${forum.order}</td>
+          <td><strong>${escapeHtml(forum.name)}</strong>
+            <div style="font-size:11px; color: var(--color-text-muted);">${escapeHtml(forum.description)}</div>
+          </td>
+          <td>${escapeHtml(forum.category.name)}</td>
+          <td style="text-align:center;">
+            <button class="btn btn--sm" disabled>Edit</button>
+          </td>
+        </tr>
+      `).join("")
+    : '<tr><td colspan="4" style="text-align:center; color: var(--color-text-muted);">No forums configured</td></tr>';
+
+  const categoryOptions = categories.map((cat) =>
+    `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`
+  ).join("");
+
   container.innerHTML = `
     <div class="category-group">
       <div class="category-group__header">Forums</div>
@@ -516,14 +546,12 @@ function renderForums(container) {
             <tr>
               <th style="width:50px;">Order</th>
               <th>Name</th>
-              <th>Category</th>
-              <th style="width:70px;">Threads</th>
-              <th style="width:70px;">Posts</th>
+              <th style="width:120px;">Category</th>
               <th style="width:120px; text-align:center;">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td colspan="6" style="text-align:center; color: var(--color-text-muted);">No forums configured</td></tr>
+            ${forumRows}
           </tbody>
         </table>
       </div>
@@ -532,27 +560,59 @@ function renderForums(container) {
     <div class="form-box" style="max-width:100%; margin-top: var(--spacing-md);">
       <div class="form-box__header">Add Forum</div>
       <div class="form-box__body">
-        <div class="form-group">
-          <label>Forum Name</label>
-          <input type="text" placeholder="e.g. Introductions">
-        </div>
-        <div class="form-group">
-          <label>Description</label>
-          <input type="text" placeholder="Brief description of this forum">
-        </div>
-        <div class="form-group">
-          <label>Category</label>
-          <select class="admin-select" style="width:200px;">
-            <option>-- Select Category --</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label><input type="checkbox"> Require moderator approval for new threads</label>
-        </div>
-        <button type="button" class="btn btn--primary" disabled>Add Forum</button>
+        <div id="forum-error" class="form-error" style="display:none;"></div>
+        <form id="add-forum-form">
+          <div style="display:flex; gap: var(--spacing-sm); align-items:flex-end; flex-wrap:wrap;">
+            <div class="form-group" style="flex:1; min-width:150px; margin-bottom:0;">
+              <label>Forum Name</label>
+              <input type="text" id="forum-name" placeholder="e.g. Introductions" required>
+            </div>
+            <div class="form-group" style="flex:1; min-width:150px; margin-bottom:0;">
+              <label>Description</label>
+              <input type="text" id="forum-description" placeholder="Brief description" required>
+            </div>
+            <div class="form-group" style="width:150px; margin-bottom:0;">
+              <label>Category</label>
+              <select class="admin-select" id="forum-category" required>
+                <option value="">-- Select --</option>
+                ${categoryOptions}
+              </select>
+            </div>
+            <div class="form-group" style="width:80px; margin-bottom:0;">
+              <label>Order</label>
+              <input type="number" id="forum-order" min="1" placeholder="${forums.length + 1}">
+            </div>
+            <button type="submit" class="btn btn--primary">Add Forum</button>
+          </div>
+        </form>
       </div>
     </div>
   `;
+
+  // Mount form handler
+  const form = document.getElementById("add-forum-form");
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById("forum-error");
+      const name = document.getElementById("forum-name").value.trim();
+      const description = document.getElementById("forum-description").value.trim();
+      const category_id = parseInt(document.getElementById("forum-category").value, 10);
+      const orderVal = document.getElementById("forum-order").value;
+      const order = orderVal ? parseInt(orderVal, 10) : forums.length + 1;
+
+      if (!name || !description || !category_id) return;
+
+      try {
+        errorEl.style.display = "none";
+        await createForum(name, description, order, category_id);
+        await renderForums(container);
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = "block";
+      }
+    });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
