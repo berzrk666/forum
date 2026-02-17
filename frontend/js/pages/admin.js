@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from "../components/breadcrumb.js";
 import { isLoggedIn, getRole } from "../state.js";
-import { getUsers, getCategories, createCategory, deleteCategory, getForums, createForum } from "../api/admin.js";
+import { getUsers, getCategories, createCategory, deleteCategory, getForums, createForum, updateForum } from "../api/admin.js";
 
 const ADMIN_ROLES = ["Admin", "Moderator"];
 
@@ -520,14 +520,14 @@ async function renderForums(container) {
 
   const forumRows = forums.length > 0
     ? forums.map((forum) => `
-        <tr>
+        <tr data-forum-row="${forum.id}">
           <td>${forum.order}</td>
           <td><strong>${escapeHtml(forum.name)}</strong>
             <div style="font-size:11px; color: var(--color-text-muted);">${escapeHtml(forum.description)}</div>
           </td>
           <td>${escapeHtml(forum.category.name)}</td>
           <td style="text-align:center;">
-            <button class="btn btn--sm" disabled>Edit</button>
+            <button class="btn btn--sm" data-edit-forum="${forum.id}">Edit</button>
           </td>
         </tr>
       `).join("")
@@ -554,6 +554,38 @@ async function renderForums(container) {
             ${forumRows}
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div id="edit-forum-box" class="form-box" style="max-width:100%; margin-top: var(--spacing-md); display:none;">
+      <div class="form-box__header">Edit Forum</div>
+      <div class="form-box__body">
+        <div id="edit-forum-error" class="form-error" style="display:none;"></div>
+        <form id="edit-forum-form">
+          <input type="hidden" id="edit-forum-id">
+          <div style="display:flex; gap: var(--spacing-sm); align-items:flex-end; flex-wrap:wrap;">
+            <div class="form-group" style="flex:1; min-width:150px; margin-bottom:0;">
+              <label>Forum Name</label>
+              <input type="text" id="edit-forum-name" required>
+            </div>
+            <div class="form-group" style="flex:1; min-width:150px; margin-bottom:0;">
+              <label>Description</label>
+              <input type="text" id="edit-forum-description" required>
+            </div>
+            <div class="form-group" style="width:150px; margin-bottom:0;">
+              <label>Category</label>
+              <select class="admin-select" id="edit-forum-category" required>
+                ${categoryOptions}
+              </select>
+            </div>
+            <div class="form-group" style="width:80px; margin-bottom:0;">
+              <label>Order</label>
+              <input type="number" id="edit-forum-order" min="1" required>
+            </div>
+            <button type="submit" class="btn btn--primary">Save</button>
+            <button type="button" class="btn" id="cancel-edit-forum">Cancel</button>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -589,10 +621,10 @@ async function renderForums(container) {
     </div>
   `;
 
-  // Mount form handler
-  const form = document.getElementById("add-forum-form");
-  if (form) {
-    form.addEventListener("submit", async (e) => {
+  // Mount add form handler
+  const addForm = document.getElementById("add-forum-form");
+  if (addForm) {
+    addForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const errorEl = document.getElementById("forum-error");
       const name = document.getElementById("forum-name").value.trim();
@@ -606,6 +638,56 @@ async function renderForums(container) {
       try {
         errorEl.style.display = "none";
         await createForum(name, description, order, category_id);
+        await renderForums(container);
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = "block";
+      }
+    });
+  }
+
+  // Mount edit button handlers
+  document.querySelectorAll("[data-edit-forum]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const forumId = parseInt(btn.dataset.editForum, 10);
+      const forum = forums.find((f) => f.id === forumId);
+      if (!forum) return;
+
+      document.getElementById("edit-forum-id").value = forum.id;
+      document.getElementById("edit-forum-name").value = forum.name;
+      document.getElementById("edit-forum-description").value = forum.description;
+      document.getElementById("edit-forum-category").value = forum.category.id;
+      document.getElementById("edit-forum-order").value = forum.order;
+      document.getElementById("edit-forum-box").style.display = "block";
+      document.getElementById("edit-forum-error").style.display = "none";
+    });
+  });
+
+  // Mount cancel edit handler
+  const cancelBtn = document.getElementById("cancel-edit-forum");
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", () => {
+      document.getElementById("edit-forum-box").style.display = "none";
+    });
+  }
+
+  // Mount edit form handler
+  const editForm = document.getElementById("edit-forum-form");
+  if (editForm) {
+    editForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById("edit-forum-error");
+      const id = parseInt(document.getElementById("edit-forum-id").value, 10);
+      const name = document.getElementById("edit-forum-name").value.trim();
+      const description = document.getElementById("edit-forum-description").value.trim();
+      const category_id = parseInt(document.getElementById("edit-forum-category").value, 10);
+      const order = parseInt(document.getElementById("edit-forum-order").value, 10);
+
+      if (!name || !description || !category_id || !order) return;
+
+      try {
+        errorEl.style.display = "none";
+        await updateForum(id, { name, description, category_id, order });
         await renderForums(container);
       } catch (err) {
         errorEl.textContent = err.message;

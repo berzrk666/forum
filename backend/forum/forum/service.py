@@ -8,9 +8,9 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import select
 
 from forum.category.models import Category
-from forum.forum.exceptions import CategoryDoesNotExist
+from forum.forum.exceptions import CategoryDoesNotExist, ForumDoesNotExist
 from forum.forum.models import Forum
-from forum.forum.schemas import ForumCreate
+from forum.forum.schemas import ForumCreate, ForumEdit, ForumRead
 
 log = logging.getLogger(__name__)
 
@@ -29,10 +29,12 @@ class ForumService:
 
             forum = Forum(**forum_in.model_dump())
             session.add(forum)
-            await session.commit()
+            await session.flush()
             await session.refresh(forum)
 
             # Load Category data
+            # PERF: You don't need this query if you the same with
+            # the update() method: forum.category = category
             await session.get(
                 Forum,
                 forum.id,
@@ -61,6 +63,43 @@ class ForumService:
             return forums.all()  # type: ignore
         except Exception as e:
             log.error(f"Unexpected error when listing all forums: {e}")
+            raise
+
+    async def update(
+        self, session: AsyncSession, id: int, forum_in: ForumEdit
+    ) -> ForumRead:
+        """Update forum."""
+        try:
+            # Validate if Forum exists
+            forum = await session.get(Forum, id)
+            if forum is None:
+                raise ForumDoesNotExist
+
+            # Validate if new category_id exists
+            category = await session.get(Category, forum_in.category_id)
+            if category is None:
+                raise CategoryDoesNotExist
+
+            if forum_in.name:
+                forum.name = forum_in.name
+
+            if forum_in.category_id:
+                forum.category = category
+
+            if forum_in.description:
+                forum.description = forum_in.description
+
+            if forum_in.order:
+                forum.order = forum_in.order
+
+            session.add(forum)
+            await session.flush()
+            await session.refresh(forum)
+            # For some reason this is needed here
+            forum.category = category
+            return forum
+        except Exception as e:
+            log.error(f"Unexpected error when updating forum {id}: {e}")
             raise
 
 

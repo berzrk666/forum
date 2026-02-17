@@ -17,8 +17,18 @@ class ForumCreate(ForumBase):
 
 
 class ForumRead(ForumBase):
+    id: int
     order: PositiveInt
     category: CategoryRead
+
+
+class ForumEdit(BaseModel):
+    """Pydantic schema to update a forum."""
+
+    name: str | None = None
+    description: str | None = None
+    category_id: int | None = None
+    order: PositiveInt | None = None
 
 
 class ForumPagination(BaseModel):

@@ -13,3 +13,5 @@ export const deleteCategory = (id) =>
 export const getForums = () => fetchAPI("/forums/");
 export const createForum = (name, description, order, category_id) =>
   fetchAPI("/forums/", { method: "POST", body: { name, description, order, category_id } });
+export const updateForum = (id, data) =>
+  fetchAPI(`/forums/${id}`, { method: "PUT", body: data });
