@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict
+from pydantic.types import PositiveInt
 
 from forum.category.schemas import CategoryRead
 
@@ -6,6 +7,7 @@ from forum.category.schemas import CategoryRead
 class ForumBase(BaseModel):
     name: str
     description: str
+    order: PositiveInt
 
     model_config = ConfigDict(from_attributes=True)
 
