@@ -1,10 +1,14 @@
 import logging
+from types import NoneType
 
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import select
 
+from forum.category.models import Category
+from forum.forum.exceptions import CategoryDoesNotExist
 from forum.forum.models import Forum
 from forum.forum.schemas import ForumCreate
 
@@ -15,6 +19,14 @@ class ForumService:
     async def create(self, session: AsyncSession, forum_in: ForumCreate) -> Forum:
         """Create a new Forum."""
         try:
+            category = await session.get(Category, forum_in.category_id)
+            if not category:
+                raise CategoryDoesNotExist
+
+            if forum_in.order is None:
+                max_order = await session.scalar(func.max(Forum.order))
+                forum_in.order = (max_order or 0) + 1
+
             forum = Forum(**forum_in.model_dump())
             session.add(forum)
             await session.commit()

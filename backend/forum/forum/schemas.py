@@ -7,16 +7,17 @@ from forum.category.schemas import CategoryRead
 class ForumBase(BaseModel):
     name: str
     description: str
-    order: PositiveInt
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class ForumCreate(ForumBase):
     category_id: int
+    order: PositiveInt | None = None
 
 
 class ForumRead(ForumBase):
+    order: PositiveInt
     category: CategoryRead
 
 
