@@ -97,3 +97,51 @@ class TestForumServiceCreate:
         forum2 = await forum_service.create(test_session, sample)
 
         assert forum1.name == forum2.name
+
+
+class TestForumServiceList:
+    async def test_empty_list(self, forum_service: ForumService, test_session):
+        """Empty list should be returned."""
+        forums = await forum_service.list(test_session)
+        assert forums == []
+
+    async def test_list_one_forum(
+        self, forum_service: ForumService, test_session, test_category
+    ):
+        """List with one forum should be returned."""
+        sample = ForumCreate(
+            name="Forum", description="Cool forum", order=1, category_id=1
+        )
+        await forum_service.create(test_session, sample)
+
+        forums = await forum_service.list(test_session)
+        assert len(forums) == 1
+
+    async def test_list_multiple_forums(
+        self, forum_service: ForumService, test_session, test_category
+    ):
+        """List with multiple forums should be returned."""
+        sample = ForumCreate(name="Forum", description="Cool forum", category_id=1)
+        await forum_service.create(test_session, sample)
+        sample = ForumCreate(name="Forum", description="Cool forum", category_id=1)
+        await forum_service.create(test_session, sample)
+        sample = ForumCreate(name="Forum", description="Cool forum", category_id=1)
+        await forum_service.create(test_session, sample)
+
+        forums = await forum_service.list(test_session)
+        assert len(forums) == 3
+
+    async def test_list_all_information_shown(
+        self, forum_service: ForumService, test_session, test_category
+    ):
+        """List with one forum should be returned."""
+        sample = ForumCreate(
+            name="Forum", description="Cool forum", order=1, category_id=1
+        )
+        await forum_service.create(test_session, sample)
+
+        forums = await forum_service.list(test_session)
+        assert len(forums) == 1
+        assert forums[0].name == "Forum"
+        assert forums[0].category.id == 1
+        assert forums[0].category.name == "General"
