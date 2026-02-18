@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING
 
 import jwt
 from argon2 import PasswordHasher
@@ -9,6 +10,9 @@ from sqlalchemy.types import Integer, LargeBinary, String
 from forum.auth.schemas import TokenData
 from forum.config import settings
 from forum.database.core import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from forum.thread.models import Thread
 
 
 def hash_password(password: str) -> bytes:
@@ -33,6 +37,8 @@ class User(Base, TimestampMixin):
     # Relationships
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), nullable=True)
     role: Mapped["Role"] = relationship(back_populates="users")
+
+    threads: Mapped[list["Thread"]] = relationship(back_populates="author")
 
     def verify_password(self, password: str) -> bool:
         """Check if the `password` matches the hashed password in database."""

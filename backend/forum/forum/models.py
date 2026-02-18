@@ -6,8 +6,7 @@ from forum.database.core import Base
 
 if TYPE_CHECKING:
     from forum.category.models import Category
-else:
-    Category = "Category"
+    from forum.thread.models import Thread
 
 
 class Forum(Base):
@@ -22,3 +21,5 @@ class Forum(Base):
 
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
     category: Mapped["Category"] = relationship(back_populates="forums")
+
+    threads: Mapped[list["Thread"]] = relationship(back_populates="forum")
