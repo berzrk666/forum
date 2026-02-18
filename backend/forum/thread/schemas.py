@@ -22,6 +22,7 @@ class ThreadCreate(ThreadBase):
 
 
 class ThreadRead(ThreadBase):
+    id: int
     author: Author
     created_at: datetime
     is_pinned: bool
