@@ -15,3 +15,8 @@ export const createForum = (name, description, order, category_id) =>
   fetchAPI("/forums/", { method: "POST", body: { name, description, order, category_id } });
 export const updateForum = (id, data) =>
   fetchAPI(`/forums/${id}`, { method: "PUT", body: data });
+
+// Threads
+export const getThreadsByForum = (forum_id) => fetchAPI(`/forums/${forum_id}/threads`);
+export const createThread = (title, forum_id) =>
+  fetchAPI("/thread/", { method: "POST", body: { title, forum_id } });

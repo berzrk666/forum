@@ -52,7 +52,7 @@ export async function mountHome() {
           <tr>
             <td class="forum-table__icon">&#128172;</td>
             <td class="forum-table__title">
-              <a href="#/forum/${forum.order}">${escapeHtml(forum.name)}</a>
+              <a href="#/forum/${forum.id}">${escapeHtml(forum.name)}</a>
               <div class="forum-table__description">${escapeHtml(forum.description)}</div>
             </td>
             <td class="forum-table__stat">0</td>
