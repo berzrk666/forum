@@ -1,4 +1,3 @@
-from unittest.mock import MagicMock
 import pytest
 
 from forum.auth.exceptions import (
@@ -8,7 +7,7 @@ from forum.auth.exceptions import (
     UsernameAlreadyExists,
 )
 from forum.auth.models import User
-from forum.auth.schemas import UserCreate, UserLogin
+from forum.auth.schemas import UserLogin
 from forum.auth.service import AuthService
 from tests.conftest import VALID_EMAIL, VALID_PASSWORD, VALID_USERNAME
 
@@ -16,11 +15,6 @@ from tests.conftest import VALID_EMAIL, VALID_PASSWORD, VALID_USERNAME
 @pytest.fixture
 def auth_service():
     return AuthService()
-
-
-@pytest.fixture
-def valid_user(user_data) -> UserCreate:
-    return UserCreate(**user_data)
 
 
 class TestAuthServiceRegister:

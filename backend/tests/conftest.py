@@ -5,6 +5,12 @@ import pytest
 from fakeredis.aioredis import FakeRedis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+import forum.auth.models  # noqa: F401
+from forum.auth.schemas import UserCreate
+import forum.forum.models  # noqa: F401
+import forum.post.models  # noqa: F401
+import forum.thread.models  # noqa: F401
+from forum.auth.models import User
 from forum.database.core import Base
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -60,3 +66,18 @@ def mock_request():
     request.app = MagicMock()
     request.app.state = MagicMock()
     return request
+
+
+@pytest.fixture
+def valid_user(user_data) -> UserCreate:
+    return UserCreate(**user_data)
+
+
+@pytest.fixture
+async def test_user(test_session):
+    u = User(
+        username=VALID_USERNAME, email=VALID_EMAIL, password=VALID_PASSWORD.encode()
+    )
+    test_session.add(u)
+    await test_session.flush()
+    return u
