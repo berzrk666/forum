@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from forum.auth.dependencies import CurrentUser
 from forum.database.core import DbSession
+from forum.post.exceptions import ThreadIsLocked
 from forum.post.schemas import PostCreate, PostPagination, PostRead
 from forum.post.service import post_service as srvc
 from forum.thread.router import thread_router
@@ -21,6 +22,11 @@ async def create_post(
     try:
         post = await srvc.create(db_session, post_in, current_user)
         return post
+
+    except ThreadIsLocked:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "You cannot post in a thread that is locked."
+        )
     except Exception:
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"

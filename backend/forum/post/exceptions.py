@@ -1,0 +1,2 @@
+class ThreadIsLocked(Exception):
+    pass

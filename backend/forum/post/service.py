@@ -1,9 +1,11 @@
 import logging
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from forum.auth.models import User
+from forum.post.exceptions import ThreadIsLocked
 from forum.post.models import Post
 from forum.post.schemas import PostCreate
 from forum.thread.exception import ThreadDoesNotExist
@@ -21,6 +23,9 @@ class PostService:
             thread = await session.get(Thread, post_in.thread_id)
             if thread is None:
                 raise ThreadDoesNotExist
+
+            if thread.is_locked:
+                raise ThreadIsLocked
 
             post = Post(**post_in.model_dump())
             post.thread = thread
