@@ -1,0 +1,2 @@
+class ThreadDoesNotExist(Exception):
+    pass

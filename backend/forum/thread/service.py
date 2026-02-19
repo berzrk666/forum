@@ -7,6 +7,7 @@ from sqlalchemy.sql import select
 from forum.auth.models import User
 from forum.forum.exceptions import ForumDoesNotExist
 from forum.forum.models import Forum
+from forum.thread.exception import ThreadDoesNotExist
 from forum.thread.models import Thread
 from forum.thread.schemas import ThreadCreate
 
@@ -52,6 +53,78 @@ class ThreadService:
             log.error(
                 f"Unexpected error when listing threads under Forum:{forum_id}: {e}"
             )
+            raise
+
+    async def get(self, session: AsyncSession, id: int) -> Thread:
+        """Get a thread by ID."""
+        try:
+            thread = await session.get(
+                Thread,
+                id,
+                options=[selectinload(Thread.author), selectinload(Thread.forum)],
+            )
+            if thread is None:
+                raise ThreadDoesNotExist
+
+            return thread
+        except Exception as e:
+            log.error(f"Unexpected error when retrieve thread:{id}: {e}")
+            raise
+
+    async def pin(self, session: AsyncSession, id: int) -> Thread:
+        """Pin a thread by ID."""
+        try:
+            thread = await session.get(
+                Thread, id, options=[selectinload(Thread.author)]
+            )
+            if thread is None:
+                raise ThreadDoesNotExist
+            thread.is_pinned = True
+            return thread
+        except Exception as e:
+            log.error(f"Unexpected error when pinning thread:{id}: {e}")
+            raise
+
+    async def unpin(self, session: AsyncSession, id: int) -> Thread:
+        """Unpin a thread by ID."""
+        try:
+            thread = await session.get(
+                Thread, id, options=[selectinload(Thread.author)]
+            )
+            if thread is None:
+                raise ThreadDoesNotExist
+            thread.is_pinned = False
+            return thread
+        except Exception as e:
+            log.error(f"Unexpected error when unpinning thread:{id}: {e}")
+            raise
+
+    async def lock(self, session: AsyncSession, id: int) -> Thread:
+        """Lock a thread by ID."""
+        try:
+            thread = await session.get(
+                Thread, id, options=[selectinload(Thread.author)]
+            )
+            if thread is None:
+                raise ThreadDoesNotExist
+            thread.is_locked = True
+            return thread
+        except Exception as e:
+            log.error(f"Unexpected error when locking thread:{id}: {e}")
+            raise
+
+    async def unlock(self, session: AsyncSession, id: int) -> Thread:
+        """Unlock a thread by ID."""
+        try:
+            thread = await session.get(
+                Thread, id, options=[selectinload(Thread.author)]
+            )
+            if thread is None:
+                raise ThreadDoesNotExist
+            thread.is_locked = False
+            return thread
+        except Exception as e:
+            log.error(f"Unexpected error when unlocking thread:{id}: {e}")
             raise
 
 

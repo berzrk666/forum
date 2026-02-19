@@ -1,8 +1,13 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from forum.auth.dependencies import CurrentUser
+from forum.auth.dependencies import CurrentUser, get_moderator_user
 from forum.database.core import DbSession
-from forum.thread.schemas import ThreadCreate, ThreadPagination, ThreadRead
+from forum.thread.exception import ThreadDoesNotExist
+from forum.thread.schemas import (
+    ThreadCreate,
+    ThreadPagination,
+    ThreadRead,
+)
 from forum.thread.service import thread_service as srvc
 from forum.forum.router import forum_router
 
@@ -31,6 +36,92 @@ async def list_threads_under_forum(db_session: DbSession, id: int):
         threads = await srvc.list_threads(db_session, id)
         threads_data = [ThreadRead.model_validate(t) for t in threads]
         return ThreadPagination(data=threads_data)
+    except Exception:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
+        )
+
+
+@thread_router.get("/{id}", response_model=ThreadRead)
+async def read_thread(db_session: DbSession, id: int):
+    """Read a thread."""
+    try:
+        thread = await srvc.get(db_session, id)
+        return thread
+    except ThreadDoesNotExist:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Thread does not exist.")
+    except Exception:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
+        )
+
+
+@thread_router.patch(
+    "/{id}/pin",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(get_moderator_user)],
+    response_model=ThreadRead,
+)
+async def pin_thread(db_session: DbSession, id: int):
+    """Pin a thread."""
+    try:
+        return await srvc.pin(db_session, id)
+    except ThreadDoesNotExist:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Thread does not exist.")
+    except Exception:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
+        )
+
+
+@thread_router.patch(
+    "/{id}/unpin",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(get_moderator_user)],
+    response_model=ThreadRead,
+)
+async def unpin_thread(db_session: DbSession, id: int):
+    """Unpin a thread."""
+    try:
+        return await srvc.unpin(db_session, id)
+    except ThreadDoesNotExist:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Thread does not exist.")
+    except Exception:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
+        )
+
+
+@thread_router.patch(
+    "/{id}/lock",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(get_moderator_user)],
+    response_model=ThreadRead,
+)
+async def lock_thread(db_session: DbSession, id: int):
+    """Lock a thread."""
+    try:
+        return await srvc.lock(db_session, id)
+    except ThreadDoesNotExist:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Thread does not exist.")
+    except Exception:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
+        )
+
+
+@thread_router.patch(
+    "/{id}/unlock",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(get_moderator_user)],
+    response_model=ThreadRead,
+)
+async def unlock_thread(db_session: DbSession, id: int):
+    """Unlock a thread."""
+    try:
+        return await srvc.unlock(db_session, id)
+    except ThreadDoesNotExist:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Thread does not exist.")
     except Exception:
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
