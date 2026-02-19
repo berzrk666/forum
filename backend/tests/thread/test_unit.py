@@ -1,13 +1,10 @@
 import pytest
 
-from forum.auth.models import User
 from forum.category.models import Category
 from forum.forum.exceptions import ForumDoesNotExist
 from forum.forum.models import Forum
-from forum.thread.models import Thread
 from forum.thread.schemas import ThreadCreate
 from forum.thread.service import ThreadService
-from tests.conftest import VALID_EMAIL, VALID_PASSWORD, VALID_USERNAME
 
 
 @pytest.fixture
@@ -84,10 +81,45 @@ class TestThreadServiceCreate:
         self, thread_service: ThreadService, test_session, test_forum, test_user
     ):
         """Thread with duplicate name should exist."""
-        t = ThreadCreate(title="Test", forum_id=1)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id)
         thread1 = await thread_service.create(test_session, t, test_user)
-        t = ThreadCreate(title="Test", forum_id=1)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id)
         thread2 = await thread_service.create(test_session, t, test_user)
 
         assert thread1
         assert thread2
+
+
+class TestThreadServiceList:
+    async def test_list_one_thread(
+        self, thread_service: ThreadService, test_session, test_forum, test_user
+    ):
+        t = ThreadCreate(title="Test", forum_id=test_forum.id)
+        await thread_service.create(test_session, t, test_user)
+
+        threads = await thread_service.list_threads(test_session, test_forum.id)
+
+        assert threads
+        assert len(threads) == 1
+
+    async def test_list_multiple_threads(
+        self, thread_service: ThreadService, test_session, test_forum, test_user
+    ):
+        t = ThreadCreate(title="Test", forum_id=test_forum.id)
+        await thread_service.create(test_session, t, test_user)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id)
+        await thread_service.create(test_session, t, test_user)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id)
+        await thread_service.create(test_session, t, test_user)
+
+        threads = await thread_service.list_threads(test_session, test_forum.id)
+
+        assert threads
+        assert len(threads) == 3
+
+    async def test_list_empty_returns_empty_list(
+        self, thread_service: ThreadService, test_session, test_forum
+    ):
+        threads = await thread_service.list_threads(test_session, test_forum.id)
+
+        assert threads == []
