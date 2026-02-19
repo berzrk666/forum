@@ -7,6 +7,7 @@ from forum.database.core import DbSession
 from forum.post.exceptions import ThreadIsLocked
 from forum.post.schemas import PostCreate, PostPagination, PostRead
 from forum.post.service import post_service as srvc
+from forum.thread.exception import ThreadDoesNotExist
 from forum.thread.router import thread_router
 
 log = logging.getLogger(__name__)
@@ -23,9 +24,12 @@ async def create_post(
         post = await srvc.create(db_session, post_in, current_user)
         return post
 
+    except ThreadDoesNotExist:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Thread does not exist")
+
     except ThreadIsLocked:
         raise HTTPException(
-            status.HTTP_403_FORBIDDEN, "You cannot post in a thread that is locked."
+            status.HTTP_403_FORBIDDEN, "You cannot post in a thread that is locked"
         )
     except Exception:
         raise HTTPException(
