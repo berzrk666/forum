@@ -21,6 +21,11 @@ export const getThreadsByForum = (forum_id) => fetchAPI(`/forums/${forum_id}/thr
 export const getThread = (id) => fetchAPI(`/thread/${id}`);
 export const createThread = (title, forum_id) =>
   fetchAPI("/thread/", { method: "POST", body: { title, forum_id } });
+// Posts
+export const getPostsByThread = (thread_id) => fetchAPI(`/thread/${thread_id}/posts`);
+export const createPost = (thread_id, content) =>
+  fetchAPI("/posts/", { method: "POST", body: { thread_id, content } });
+
 export const pinThread = (id) => fetchAPI(`/thread/${id}/pin`, { method: "PATCH" });
 export const unpinThread = (id) => fetchAPI(`/thread/${id}/unpin`, { method: "PATCH" });
 export const lockThread = (id) => fetchAPI(`/thread/${id}/lock`, { method: "PATCH" });

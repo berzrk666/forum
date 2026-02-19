@@ -1,9 +1,13 @@
+from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import String
-from forum.auth.models import User
 from forum.database.core import Base, TimestampMixin
-from forum.forum.models import Forum
+
+if TYPE_CHECKING:
+    from forum.auth.models import User
+    from forum.forum.models import Forum
+    from forum.post.models import Post
 
 
 class Thread(Base, TimestampMixin):
@@ -17,7 +21,9 @@ class Thread(Base, TimestampMixin):
     is_locked: Mapped[bool] = mapped_column(default=False)
 
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    author: Mapped[User] = relationship(back_populates="threads")
+    author: Mapped["User"] = relationship(back_populates="threads")
 
     forum_id: Mapped[int] = mapped_column(ForeignKey("forums.id"))
-    forum: Mapped[Forum] = relationship(back_populates="threads")
+    forum: Mapped["Forum"] = relationship(back_populates="threads")
+
+    posts: Mapped[list["Post"]] = relationship(back_populates="thread")

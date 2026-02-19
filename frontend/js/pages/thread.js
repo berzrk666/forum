@@ -1,7 +1,10 @@
 import { renderBreadcrumb } from "../components/breadcrumb.js";
 import { renderPagination } from "../components/pagination.js";
 import { isLoggedIn, getRole } from "../state.js";
-import { getThread, pinThread, unpinThread, lockThread, unlockThread } from "../api/admin.js";
+import {
+  getThread, getPostsByThread, createPost,
+  pinThread, unpinThread, lockThread, unlockThread,
+} from "../api/admin.js";
 
 const MOD_ROLES = ["Admin", "Moderator"];
 
@@ -28,8 +31,14 @@ export async function mountThread() {
   const threadId = Number(container.dataset.threadId);
 
   let thread = null;
+  let posts = [];
   try {
-    thread = await getThread(threadId);
+    const [threadData, postsData] = await Promise.all([
+      getThread(threadId),
+      getPostsByThread(threadId),
+    ]);
+    thread = threadData;
+    posts = postsData.data || [];
   } catch (err) {
     container.innerHTML = `
       <div class="form-box">
@@ -61,7 +70,7 @@ export async function mountThread() {
   if (thread.is_locked) badges.push('<span class="admin-badge" style="background: var(--color-error);">Locked</span>');
   const badgesHtml = badges.length > 0 ? " " + badges.join(" ") : "";
 
-  // Moderation buttons (placed in thread header)
+  // Moderation buttons
   const modButtons = isMod
     ? `<div style="display:flex; gap: var(--spacing-xs);">
         <button class="btn btn--sm" id="btn-pin">${thread.is_pinned ? "Unpin" : "Pin"}</button>
@@ -69,7 +78,28 @@ export async function mountThread() {
       </div>`
     : "";
 
-  // Quick reply (hidden if locked or not logged in)
+  // Posts
+  const postsHtml = posts.length > 0
+    ? posts.map((post, idx) => `
+        <div class="post">
+          <div class="post__sidebar">
+            <div class="post__avatar">&#128100;</div>
+            <a href="#/profiles/${post.author.id}" class="post__username">${escapeHtml(post.author.username)}</a>
+          </div>
+          <div class="post__body">
+            <div class="post__header">
+              <span>${formatDate(post.created_at)}</span>
+              <span>#${idx + 1}</span>
+            </div>
+            <div class="post__content">
+              ${formatContent(post.content)}
+            </div>
+          </div>
+        </div>
+      `).join("")
+    : `<p style="padding: var(--spacing-md); color: var(--color-text-light);">No posts yet. Be the first to reply!</p>`;
+
+  // Reply section
   let replySection = "";
   if (thread.is_locked) {
     replySection = `
@@ -82,13 +112,13 @@ export async function mountThread() {
       <div class="quick-reply">
         <div class="quick-reply__header">Quick Reply</div>
         <div class="quick-reply__body">
+          <div id="reply-error" class="form-error" style="display:none;"></div>
           <div class="form-group">
-            <textarea placeholder="Type your reply here..." disabled></textarea>
+            <textarea id="reply-content" placeholder="Type your reply here..." rows="4"></textarea>
           </div>
         </div>
         <div class="quick-reply__actions">
-          <button class="btn btn--secondary" disabled>Preview</button>
-          <button class="btn btn--primary" disabled>Post Reply</button>
+          <button class="btn btn--primary" id="btn-post-reply">Post Reply</button>
         </div>
       </div>
     `;
@@ -100,25 +130,6 @@ export async function mountThread() {
     `;
   }
 
-  // Thread opening post (the thread itself, shown as the first post)
-  const openingPost = `
-    <div class="post">
-      <div class="post__sidebar">
-        <div class="post__avatar">&#128100;</div>
-        <a href="#/profiles/${thread.author.id}" class="post__username">${escapeHtml(thread.author.username)}</a>
-      </div>
-      <div class="post__body">
-        <div class="post__header">
-          <span>${formatDate(thread.created_at)}</span>
-          <span>#1</span>
-        </div>
-        <div class="post__content">
-          <p style="color: var(--color-text-muted); font-style: italic;">Posts not yet implemented.</p>
-        </div>
-      </div>
-    </div>
-  `;
-
   container.innerHTML = `
     <div class="thread-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
       <div>
@@ -126,6 +137,7 @@ export async function mountThread() {
         <div class="thread-header__meta">
           Started by <strong><a href="#/profiles/${thread.author.id}">${escapeHtml(thread.author.username)}</a></strong>
           &middot; ${formatDate(thread.created_at)}
+          &middot; ${posts.length} ${posts.length === 1 ? "reply" : "replies"}
         </div>
       </div>
       ${modButtons}
@@ -133,12 +145,37 @@ export async function mountThread() {
 
     <div id="mod-error" class="form-error" style="display:none; margin-top: var(--spacing-sm);"></div>
 
-    ${openingPost}
+    ${postsHtml}
 
     ${renderPagination(1, 1)}
 
     ${replySection}
   `;
+
+  // Mount reply handler
+  const replyBtn = document.getElementById("btn-post-reply");
+  if (replyBtn) {
+    replyBtn.addEventListener("click", async () => {
+      const textarea = document.getElementById("reply-content");
+      const errorEl = document.getElementById("reply-error");
+      const content = textarea.value.trim();
+      if (!content) return;
+
+      replyBtn.disabled = true;
+      replyBtn.textContent = "Posting...";
+
+      try {
+        errorEl.style.display = "none";
+        await createPost(threadId, content);
+        await mountThread();
+      } catch (err) {
+        replyBtn.disabled = false;
+        replyBtn.textContent = "Post Reply";
+        errorEl.textContent = err.message;
+        errorEl.style.display = "block";
+      }
+    });
+  }
 
   // Mount moderation button handlers
   if (isMod) {
@@ -191,6 +228,13 @@ function formatDate(isoString) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatContent(text) {
+  return text
+    .split("\n")
+    .map((line) => (line.trim() === "" ? "<br>" : `<p>${escapeHtml(line)}</p>`))
+    .join("");
 }
 
 function escapeHtml(str) {

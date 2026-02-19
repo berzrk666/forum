@@ -13,6 +13,7 @@ from forum.database.core import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from forum.thread.models import Thread
+    from forum.post.models import Post
 
 
 def hash_password(password: str) -> bytes:
@@ -39,6 +40,8 @@ class User(Base, TimestampMixin):
     role: Mapped["Role"] = relationship(back_populates="users")
 
     threads: Mapped[list["Thread"]] = relationship(back_populates="author")
+
+    posts: Mapped[list["Post"]] = relationship(back_populates="author")
 
     def verify_password(self, password: str) -> bool:
         """Check if the `password` matches the hashed password in database."""
