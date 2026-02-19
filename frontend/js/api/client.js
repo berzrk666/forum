@@ -1,9 +1,54 @@
+import { clearToken, setToken, setRole, parseJwt } from "../state.js";
+
 const API_BASE_URL = "http://localhost:8000";
 
-export async function fetchAPI(endpoint, { method = "GET", body } = {}) {
+let isRefreshing = false;
+let refreshPromise = null;
+
+async function refreshAccessToken() {
+  const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    method: "POST",
+    credentials: "include", // Send HttpOnly cookie
+  });
+
+  if (!res.ok) {
+    throw new Error("Refresh failed");
+  }
+
+  const data = await res.json();
+  const payload = parseJwt(data.access_token);
+  setToken(data.access_token);
+  setRole(payload.role || "");
+  return data.access_token;
+}
+
+async function handleTokenRefresh() {
+  // Prevent multiple simultaneous refresh attempts
+  if (isRefreshing) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+  refreshPromise = refreshAccessToken()
+    .finally(() => {
+      isRefreshing = false;
+      refreshPromise = null;
+    });
+
+  return refreshPromise;
+}
+
+function handleUnauthorized() {
+  clearToken();
+  window.location.hash = "#/login";
+  window.location.reload();
+}
+
+export async function fetchAPI(endpoint, { method = "GET", body } = {}, isRetry = false) {
   const opts = {
     method,
     headers: {},
+    credentials: "include", // Always include cookies
   };
 
   const token = localStorage.getItem("auth_token");
@@ -15,6 +60,24 @@ export async function fetchAPI(endpoint, { method = "GET", body } = {}) {
   }
 
   const res = await fetch(`${API_BASE_URL}${endpoint}`, opts);
+
+  if (res.status === 401 && !isRetry) {
+    // Try to refresh the token
+    try {
+      await handleTokenRefresh();
+      // Retry the original request with new token
+      return fetchAPI(endpoint, { method, body }, true);
+    } catch {
+      handleUnauthorized();
+      throw new Error("Session expired");
+    }
+  }
+
+  if (res.status === 401) {
+    handleUnauthorized();
+    throw new Error("Session expired");
+  }
+
   if (res.status === 204) return null;
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || "Request failed");
@@ -26,6 +89,7 @@ export async function fetchJSON(endpoint, body) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    credentials: "include", // Include cookies for refresh token
   });
 
   const data = await res.json();
@@ -39,6 +103,7 @@ export async function fetchForm(endpoint, body) {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: params,
+    credentials: "include", // Include cookies for refresh token
   });
 
   const data = await res.json();

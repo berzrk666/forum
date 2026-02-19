@@ -8,6 +8,44 @@ import { renderThread, mountThread } from "./pages/thread.js";
 import { renderLogin, mountLogin } from "./pages/login.js";
 import { renderRegister, mountRegister } from "./pages/register.js";
 import { renderAdmin, mountAdmin } from "./pages/admin.js";
+import { isLoggedIn, isTokenExpired, getToken, parseJwt, setToken, setRole, clearToken } from "./state.js";
+
+const API_BASE_URL = "http://localhost:8000";
+
+async function refreshTokenIfNeeded() {
+  const token = getToken();
+  if (!token) return false;
+
+  try {
+    const payload = parseJwt(token);
+    const now = Math.floor(Date.now() / 1000);
+    const expiresIn = payload.exp - now;
+
+    // Refresh if token expires in less than 60 seconds or already expired
+    if (expiresIn < 60) {
+      const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const newPayload = parseJwt(data.access_token);
+        setToken(data.access_token);
+        setRole(newPayload.role || "");
+        return true;
+      } else {
+        clearToken();
+        return false;
+      }
+    }
+    return true;
+  } catch {
+    // Token invalid or refresh failed
+    clearToken();
+    return false;
+  }
+}
 
 // Register routes — each returns { html, mount? }
 addRoute("/", () => ({ html: renderHome(), mount: mountHome }));
@@ -54,9 +92,22 @@ function notFound() {
 // Listen for hash changes
 window.addEventListener("hashchange", render);
 
-// Initial render
-if (!window.location.hash) {
-  window.location.hash = "#/";
-} else {
-  render();
+// Re-check auth when user returns to tab
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState === "visible") {
+    await refreshTokenIfNeeded();
+    render();
+  }
+});
+
+// Initial render with token refresh check
+async function init() {
+  await refreshTokenIfNeeded();
+  if (!window.location.hash) {
+    window.location.hash = "#/";
+  } else {
+    render();
+  }
 }
+
+init();

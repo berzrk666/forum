@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     JWT_EXPIRATION: int = 15  # minutes
     JWT_KEY: str = "very-not-secure-jwt-key"
     JWT_ALG: str = "HS256"
+    JWT_RF_TOKEN_EXPIRATION: int = 60 * 60 * 24 * 7  # 1 Week
 
     # Database
     POSTGRES_USER: str = "postgres"

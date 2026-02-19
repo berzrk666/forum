@@ -29,7 +29,33 @@ export function clearToken() {
 }
 
 export function isLoggedIn() {
-  return !!getToken();
+  const token = getToken();
+  if (!token) return false;
+
+  try {
+    const payload = parseJwt(token);
+    const now = Math.floor(Date.now() / 1000);
+    // Just check if token exists and is parseable
+    // Don't clear on expiration - let refresh mechanism handle it
+    return !!payload.exp;
+  } catch {
+    // Invalid token, clear it
+    clearToken();
+    return false;
+  }
+}
+
+export function isTokenExpired() {
+  const token = getToken();
+  if (!token) return true;
+
+  try {
+    const payload = parseJwt(token);
+    const now = Math.floor(Date.now() / 1000);
+    return payload.exp < now;
+  } catch {
+    return true;
+  }
 }
 
 export function setUser(username) {

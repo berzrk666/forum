@@ -3,12 +3,12 @@ from datetime import datetime, timezone
 
 from argon2.exceptions import VerifyMismatchError
 from fastapi import Request
+from redis.asyncio import Redis
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import select
-from redis.asyncio import Redis
 
 from forum.auth.exceptions import (
     EmailAlreadyExists,
@@ -69,6 +69,15 @@ class AuthService:
             log.error(f"Error authenticating {user_in}: {e}")
             raise
 
+    # TODO: Implement refreshing via service
+    async def refresh_authenticate(self, request: Request, refresh_token: str) -> User:
+        """Authenticate a User by a refresh token."""
+        try:
+            pass
+        except Exception as e:
+            log.error(f"Error refresh authenticating {refresh_token}: {e}")
+            raise
+
     async def check_authorization(
         self, request: Request, user: User, permissions: set[str]
     ):
@@ -97,7 +106,7 @@ class AuthService:
 
     async def _get(self, session: AsyncSession, id: int) -> User | None:
         """Returns a User by ID."""
-        return await session.get(User, id)
+        return await session.get(User, id, options=[joinedload(User.role)])
 
     async def _get_permissions(self, cache: Redis, user: User) -> set[str] | None:
         """
