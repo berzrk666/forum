@@ -1,5 +1,4 @@
 import logging
-from types import NoneType
 
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
