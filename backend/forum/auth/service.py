@@ -84,12 +84,13 @@ class AuthService:
         """Validate if the user has authozitation."""
         try:
             user_perms = await self._get_permissions(request.state.app.cache, user)
-            if user_perms and permissions <= user_perms:
-                return True
-            raise InsufficientPermission
         except Exception as e:
             log.error(f"Unexpected error when checking authorization for {user}: {e}")
             raise
+
+        if user_perms and permissions <= user_perms:
+            return True
+        raise InsufficientPermission
 
     async def list_users(self, session: AsyncSession) -> tuple[list[User], int]:
         """List all users."""

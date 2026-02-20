@@ -19,14 +19,13 @@ class PostService:
         self, session: AsyncSession, post_in: PostCreate, author: User
     ) -> Post:
         """Create a post."""
+        thread = await session.get(Thread, post_in.thread_id)
+        if thread is None:
+            raise ThreadDoesNotExist
+        if thread.is_locked:
+            raise ThreadIsLocked
+
         try:
-            thread = await session.get(Thread, post_in.thread_id)
-            if thread is None:
-                raise ThreadDoesNotExist
-
-            if thread.is_locked:
-                raise ThreadIsLocked
-
             post = Post(**post_in.model_dump())
             post.thread = thread
             post.author = author
@@ -41,11 +40,11 @@ class PostService:
 
     async def list_posts(self, session: AsyncSession, id: int) -> list[Post]:
         """List all posts from a thread."""
-        try:
-            thread = await session.get(Thread, id)
-            if thread is None:
-                raise ThreadDoesNotExist
+        thread = await session.get(Thread, id)
+        if thread is None:
+            raise ThreadDoesNotExist
 
+        try:
             st = (
                 select(Post)
                 .where(Post.thread_id == id)

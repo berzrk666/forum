@@ -18,11 +18,11 @@ log = logging.getLogger(__name__)
 class ForumService:
     async def create(self, session: AsyncSession, forum_in: ForumCreate) -> Forum:
         """Create a new Forum."""
-        try:
-            category = await session.get(Category, forum_in.category_id)
-            if not category:
-                raise CategoryDoesNotExist
+        category = await session.get(Category, forum_in.category_id)
+        if not category:
+            raise CategoryDoesNotExist
 
+        try:
             if forum_in.order is None:
                 max_order = await session.scalar(func.max(Forum.order))
                 forum_in.order = (max_order or 0) + 1
@@ -69,17 +69,15 @@ class ForumService:
         self, session: AsyncSession, id: int, forum_in: ForumEdit
     ) -> ForumRead:
         """Update forum."""
+        forum = await session.get(Forum, id)
+        if forum is None:
+            raise ForumDoesNotExist
+
+        category = await session.get(Category, forum_in.category_id)
+        if category is None:
+            raise CategoryDoesNotExist
+
         try:
-            # Validate if Forum exists
-            forum = await session.get(Forum, id)
-            if forum is None:
-                raise ForumDoesNotExist
-
-            # Validate if new category_id exists
-            category = await session.get(Category, forum_in.category_id)
-            if category is None:
-                raise CategoryDoesNotExist
-
             if forum_in.name:
                 forum.name = forum_in.name
 
