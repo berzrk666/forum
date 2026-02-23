@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from "../components/breadcrumb.js";
 import { register } from "../api/auth.js";
-import { setToken, setUser } from "../state.js";
+import { setToken, setUser, setUserId, setRole, parseJwt } from "../state.js";
 
 export function renderRegister() {
   const breadcrumb = renderBreadcrumb([
@@ -65,8 +65,11 @@ export function mountRegister() {
 
     try {
       const data = await register({ username, email, password });
+      const payload = parseJwt(data.access_token);
       setToken(data.access_token);
       setUser(username);
+      setUserId(payload.sub);
+      setRole(payload.role || "");
       window.location.hash = "#/";
     } catch (err) {
       errorEl.textContent = err.message;

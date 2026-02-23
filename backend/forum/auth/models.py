@@ -1,15 +1,11 @@
-from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
-import jwt
-import secrets
 from argon2 import PasswordHasher
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import Integer, LargeBinary, String
 
-from forum.auth.schemas import TokenData
-from forum.config import settings
+from forum.auth.utils import generate_jwt_token
 from forum.database.core import Base, TimestampMixin
 
 if TYPE_CHECKING:
@@ -59,14 +55,7 @@ class User(Base, TimestampMixin):
     @property
     def token(self) -> str:
         """Generate a JWT Token for the User."""
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRATION)
-        to_encode = TokenData(sub=self.username, exp=expire, role=self.role.name)
-        return jwt.encode(to_encode.model_dump(), settings.JWT_KEY, settings.JWT_ALG)
-
-    @property
-    def refresh_token(self) -> str:
-        """Generate a refresh token."""
-        return secrets.token_urlsafe(32)
+        return generate_jwt_token(self.id, self.role.name)
 
     def __repr__(self) -> str:
         return f"User=(id={self.id!r}, username={self.username!r}, created_at={self.created_at!r}, updated_at={self.updated_at!r})"

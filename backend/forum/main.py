@@ -10,7 +10,7 @@ from forum.auth import utils
 from forum.database.core import sessionlocal
 from forum.cache.core import get_cache_pool
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
 
 

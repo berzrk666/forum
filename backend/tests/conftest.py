@@ -10,7 +10,7 @@ from forum.auth.schemas import UserCreate
 import forum.forum.models  # noqa: F401
 import forum.post.models  # noqa: F401
 import forum.thread.models  # noqa: F401
-from forum.auth.models import User
+from forum.auth.models import Role, User
 from forum.database.core import Base
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -66,6 +66,19 @@ def mock_request():
     request.app = MagicMock()
     request.app.state = MagicMock()
     return request
+
+
+@pytest.fixture
+def mock_response():
+    return MagicMock()
+
+
+@pytest.fixture
+async def test_role(test_session) -> Role:
+    role = Role(id=1, name="User")
+    test_session.add(role)
+    await test_session.flush()
+    return role
 
 
 @pytest.fixture

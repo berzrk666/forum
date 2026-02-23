@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from "../components/breadcrumb.js";
 import { login } from "../api/auth.js";
-import { setToken, setUser, setRole, parseJwt } from "../state.js";
+import { setToken, setUser, setUserId, setRole, parseJwt } from "../state.js";
 
 export function renderLogin() {
   const breadcrumb = renderBreadcrumb([
@@ -52,6 +52,7 @@ export function mountLogin() {
       const payload = parseJwt(data.access_token);
       setToken(data.access_token);
       setUser(username);
+      setUserId(payload.sub);
       setRole(payload.role || "");
       window.location.hash = "#/";
     } catch (err) {

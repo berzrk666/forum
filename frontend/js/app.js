@@ -8,7 +8,7 @@ import { renderThread, mountThread } from "./pages/thread.js";
 import { renderLogin, mountLogin } from "./pages/login.js";
 import { renderRegister, mountRegister } from "./pages/register.js";
 import { renderAdmin, mountAdmin } from "./pages/admin.js";
-import { isLoggedIn, isTokenExpired, getToken, parseJwt, setToken, setRole, clearToken } from "./state.js";
+import { isLoggedIn, isTokenExpired, getToken, getUser, parseJwt, setToken, setRole, setUserId, setUser, clearToken } from "./state.js";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -32,7 +32,25 @@ async function refreshTokenIfNeeded() {
         const data = await res.json();
         const newPayload = parseJwt(data.access_token);
         setToken(data.access_token);
+        setUserId(newPayload.sub);
         setRole(newPayload.role || "");
+
+        // Fetch username if missing
+        if (!getUser()) {
+          try {
+            const meRes = await fetch(`${API_BASE_URL}/users/me`, {
+              headers: { "Authorization": `Bearer ${data.access_token}` },
+              credentials: "include",
+            });
+            if (meRes.ok) {
+              const me = await meRes.json();
+              setUser(me.username);
+            }
+          } catch {
+            // Non-critical
+          }
+        }
+
         return true;
       } else {
         clearToken();

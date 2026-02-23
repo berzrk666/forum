@@ -1,4 +1,4 @@
-import { clearToken, setToken, setRole, parseJwt } from "../state.js";
+import { clearToken, setToken, setRole, setUserId, setUser, getUser, parseJwt } from "../state.js";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -18,7 +18,25 @@ async function refreshAccessToken() {
   const data = await res.json();
   const payload = parseJwt(data.access_token);
   setToken(data.access_token);
+  setUserId(payload.sub);
   setRole(payload.role || "");
+
+  // Fetch username if not in localStorage
+  if (!getUser()) {
+    try {
+      const meRes = await fetch(`${API_BASE_URL}/users/me`, {
+        headers: { "Authorization": `Bearer ${data.access_token}` },
+        credentials: "include",
+      });
+      if (meRes.ok) {
+        const me = await meRes.json();
+        setUser(me.username);
+      }
+    } catch {
+      // Non-critical, username will be missing from header
+    }
+  }
+
   return data.access_token;
 }
 

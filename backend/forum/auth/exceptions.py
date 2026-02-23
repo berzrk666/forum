@@ -16,3 +16,7 @@ class IncorrectPasswordOrUsername(Exception):
 
 class InsufficientPermission(Exception):
     pass
+
+
+class InvalidRefreshToken(Exception):
+    pass

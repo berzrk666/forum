@@ -1,6 +1,7 @@
 const TOKEN_KEY = "auth_token";
 const USER_KEY = "auth_user";
 const ROLE_KEY = "auth_role";
+const USER_ID_KEY = "auth_user_id";
 
 export function parseJwt(token) {
   const base64Url = token.split(".")[1];
@@ -26,6 +27,7 @@ export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(ROLE_KEY);
+  localStorage.removeItem(USER_ID_KEY);
 }
 
 export function isLoggedIn() {
@@ -72,4 +74,12 @@ export function setRole(role) {
 
 export function getRole() {
   return localStorage.getItem(ROLE_KEY);
+}
+
+export function setUserId(id) {
+  localStorage.setItem(USER_ID_KEY, id);
+}
+
+export function getUserId() {
+  return localStorage.getItem(USER_ID_KEY);
 }

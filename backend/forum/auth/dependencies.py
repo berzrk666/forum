@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 import jwt
@@ -12,6 +13,7 @@ from forum.database.core import DbSession
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
+log = logging.getLogger(__name__)
 
 credentials_exception = HTTPException(
     status.HTTP_401_UNAUTHORIZED,
@@ -26,12 +28,12 @@ async def get_current_user(
     """Validate current user"""
     try:
         payload = jwt.decode(token, settings.JWT_KEY, algorithms=[settings.JWT_ALG])
-        username = payload.get("sub")
-        if username is None:
+        user_id = payload.get("sub")
+        if user_id is None:
             raise credentials_exception
     except jwt.InvalidTokenError:
         raise credentials_exception
-    user = await auth_service._get_by_username(session, username)
+    user = await auth_service._get(session, user_id)
     if not user:
         raise credentials_exception
     return user
