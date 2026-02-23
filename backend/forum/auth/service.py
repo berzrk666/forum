@@ -60,14 +60,11 @@ class AuthService:
 
             # Create refresh token
             refresh_token = generate_refresh_token()
-            log.debug(f"Generated the following refresh_token: {refresh_token}")
             await self._cache_store_refresh_token(
                 request.app.state.cache,
                 refresh_token,
                 {"user_id": user.id, "role": user.role.name},
             )
-
-            log.debug("OK. Stored the refresh token in cache.")
 
             self._set_cookie_refresh_token(response, refresh_token)
 
@@ -100,12 +97,10 @@ class AuthService:
         cache_db = request.app.state.cache
 
         user_data = await cache_db.get(f"{REFRESH_TOKEN_PREFIX}:{refresh_token}")
-        log.debug(f"{user_data = }")
         if not user_data:
             raise InvalidRefreshToken
 
         # Delete old refresh
-        log.debug("Delete old refresh {REFRESH_TOKEN_PREFIX}:{refresh_token}")
         await cache_db.delete(f"{REFRESH_TOKEN_PREFIX}:{refresh_token}")
 
         # Save new refresh
@@ -152,9 +147,6 @@ class AuthService:
         self, cache: Redis, refresh_token, user_data: dict
     ):
         """Store refresh token in cache."""
-        log.debug(
-            f"SET {REFRESH_TOKEN_PREFIX}:{refresh_token} = {json.dumps(user_data)}"
-        )
         await cache.set(
             f"{REFRESH_TOKEN_PREFIX}:{refresh_token}",
             json.dumps(user_data),
