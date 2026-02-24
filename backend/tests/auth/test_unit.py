@@ -90,35 +90,27 @@ def valid_login() -> UserLogin:
     return UserLogin(username=VALID_USERNAME, password=VALID_PASSWORD)
 
 
-class TestAuthServiceAuthenticate:
-    async def test_authenticate_valid(
+class TestAuthServiceLogin:
+    async def test_login_valid(
         self,
         auth_service: AuthService,
         test_session,
         test_role,
         test_redis,
-        mock_request,
-        mock_response,
         valid_user,
         valid_login,
     ):
-        """User should be returned after authenticated."""
-        mock_request.app.state.cache = test_redis
+        """Tokens should be returned after authenticated."""
         await auth_service.register(test_session, valid_user)
 
-        user = await auth_service.authenticate(
-            test_session, mock_request, mock_response, valid_login
-        )
+        tokens = await auth_service.login(test_session, test_redis, valid_login)
+        assert tokens
 
-        assert user.username == VALID_USERNAME
-        assert user.email == VALID_EMAIL
-
-    async def test_authenticate_wrong_password(
+    async def test_login_with_wrong_password(
         self,
         auth_service: AuthService,
         test_session,
-        mock_request,
-        mock_response,
+        test_redis,
         valid_user,
         valid_login,
     ):
@@ -128,16 +120,13 @@ class TestAuthServiceAuthenticate:
         login_data = valid_login
         login_data.password = "wrongpassword"
         with pytest.raises(IncorrectPasswordOrUsername):
-            await auth_service.authenticate(
-                test_session, mock_request, mock_response, login_data
-            )
+            await auth_service.login(test_session, test_redis, login_data)
 
-    async def test_authenticate_wrong_username(
+    async def test_login_with_wrong_username(
         self,
         auth_service: AuthService,
         test_session,
-        mock_request,
-        mock_response,
+        test_redis,
         valid_user,
         valid_login,
     ):
@@ -147,23 +136,18 @@ class TestAuthServiceAuthenticate:
         login_data = valid_login
         login_data.username = "wrongusername"
         with pytest.raises(IncorrectPasswordOrUsername):
-            await auth_service.authenticate(
-                test_session, mock_request, mock_response, login_data
-            )
+            await auth_service.login(test_session, test_redis, login_data)
 
-    async def test_authenticate_inexistent(
+    async def test_with_inexistent_account(
         self,
         auth_service: AuthService,
         test_session,
-        mock_request,
-        mock_response,
+        test_redis,
         valid_login,
     ):
         """IncorrectPasswordOrUsername should be raised for inexistent usernames."""
         with pytest.raises(IncorrectPasswordOrUsername):
-            await auth_service.authenticate(
-                test_session, mock_request, mock_response, valid_login
-            )
+            await auth_service.login(test_session, test_redis, valid_login)
 
 
 class TestAuthAuthorization:

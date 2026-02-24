@@ -24,24 +24,12 @@ class UserLogin(UserBase):
     password: str
 
 
-class UserLoginResponse(BaseModel):
-    """Pydantic model for the response when User login."""
-
-    token: "Token"
-
-
 class UserCreate(UserBase):
     """Pydantic model for User creation."""
 
     email: EmailStr
     username: str
     password: str
-
-
-class UserCreateResponse(BaseModel):
-    """Pydantic model for the response after User is created."""
-
-    token: str
 
 
 class UserRead(UserBase):
@@ -64,3 +52,10 @@ class TokenData(BaseModel):
     sub: str
     exp: datetime
     role: str
+
+
+class TokenResponse(BaseModel):
+    """Pydantic model for Token returned by the service."""
+
+    access_token: str
+    refresh_token: str

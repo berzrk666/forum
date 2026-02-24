@@ -1,9 +1,8 @@
-import logging
 import json
-from datetime import datetime, timezone
+import logging
 
 from argon2.exceptions import VerifyMismatchError
-from fastapi import Request, Response
+from fastapi import Request
 from redis.asyncio import Redis
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -19,7 +18,7 @@ from forum.auth.exceptions import (
     UsernameAlreadyExists,
 )
 from forum.auth.models import User, hash_password, verify_hash
-from forum.auth.schemas import UserCreate, UserLogin
+from forum.auth.schemas import TokenResponse, UserCreate, UserLogin
 from forum.auth.utils import generate_jwt_token, generate_refresh_token
 from forum.config import settings
 
@@ -39,82 +38,70 @@ class AuthService:
 
         return await self._create(session, user)
 
-    async def authenticate(
-        self,
-        session: AsyncSession,
-        request: Request,
-        response: Response,
-        user_in: UserLogin,
-    ) -> User:
+    async def login(
+        self, session: AsyncSession, cache: Redis, user_in: UserLogin
+    ) -> TokenResponse:
         """
-        Authenticate a User by their username. Returns the authenticated user.
+        Login a user if it exists and their credentials are valid.
+        Returns an access token and refresh token.
+        """
 
-        Raises IncorrectPasswordOrUsername in case the username
-        does not exist or the password is incorrect.
-        """
         try:
-            user = await self._get_by_username(session, user_in.username)
-            if not user:
+            user = await self._authenticate(session, user_in)
+            token = user.token
+            refresh_token = generate_refresh_token()
+            await self._cache_store_refresh_token(cache, refresh_token, user)
+            return TokenResponse(access_token=token, refresh_token=refresh_token)
+        except Exception as e:
+            log.error(e)
+            raise
+
+    async def _authenticate(self, session: AsyncSession, user_in: UserLogin) -> User:
+        """
+        Authenticate user existence and credentials.
+
+        Raise IncorrectPasswordOrUsername if user does not exist
+        or credentials are wrong.
+        """
+        user = await self.get_by_username(session, user_in.username)
+
+        try:
+            if user is None:
                 raise IncorrectPasswordOrUsername
             user.verify_password(user_in.password)
-
-            # Create refresh token
-            refresh_token = generate_refresh_token()
-            await self._cache_store_refresh_token(
-                request.app.state.cache,
-                refresh_token,
-                {"user_id": user.id, "role": user.role.name},
-            )
-
-            self._set_cookie_refresh_token(response, refresh_token)
-
             return user
         except IncorrectPasswordOrUsername:
-            log.warning(
-                f"Failed login attempt with non-existent username: {user_in.username}"
-                f"from IP: {request.client.host} at {datetime.now(timezone.utc)}"  # type: ignore
-            )
             try:
                 verify_hash(user_in.password, DUMMY_HASH)
             except:  # noqa
                 pass
-            raise IncorrectPasswordOrUsername
-
+            raise
         except VerifyMismatchError:
-            log.warning(
-                f"Failed login attempt with wrong password for username: {user_in.username} "
-                f"from IP: {request.client.host} at {datetime.now(timezone.utc)}"  # type: ignore
-            )
             raise IncorrectPasswordOrUsername
         except Exception as e:
             log.error(f"Error authenticating {user_in}: {e}")
             raise
 
-    async def refresh_authenticate(
-        self, request: Request, response: Response, refresh_token: str
-    ) -> str:
-        """Authenticate a User by a refresh token. Returns a new access token."""
-        cache_db = request.app.state.cache
-
-        user_data = await cache_db.get(f"{REFRESH_TOKEN_PREFIX}:{refresh_token}")
-        if not user_data:
+    async def refresh(self, cache: Redis, refresh_token: str) -> TokenResponse:
+        """Validate a refresh token. If valid returns new tokens."""
+        user_data = await cache.get(f"{REFRESH_TOKEN_PREFIX}:{refresh_token}")
+        if user_data is None:
             raise InvalidRefreshToken
 
-        # Delete old refresh
-        await cache_db.delete(f"{REFRESH_TOKEN_PREFIX}:{refresh_token}")
+        # Delete old refresh token
+        await cache.delete(f"{REFRESH_TOKEN_PREFIX}:{refresh_token}")
 
         # Save new refresh
         new_refresh = generate_refresh_token()
-        await cache_db.set(
+        await cache.set(
             f"{REFRESH_TOKEN_PREFIX}:{new_refresh}",
             user_data,
             ex=settings.JWT_RF_TOKEN_EXPIRATION,
         )
 
-        self._set_cookie_refresh_token(response, new_refresh)
-
         user = json.loads(user_data)
-        return generate_jwt_token(user["user_id"], user["role"])
+        access_token = generate_jwt_token(user["user_id"], user["role"])
+        return TokenResponse(access_token=access_token, refresh_token=new_refresh)
 
     async def check_authorization(
         self, request: Request, user: User, permissions: set[str]
@@ -143,25 +130,13 @@ class AuthService:
             log.error("Unexpected error during user listing: ", e)
             raise
 
-    async def _cache_store_refresh_token(
-        self, cache: Redis, refresh_token, user_data: dict
-    ):
+    async def _cache_store_refresh_token(self, cache: Redis, refresh_token, user: User):
         """Store refresh token in cache."""
+        data = {"user_id": user.id, "role": user.role.name}
         await cache.set(
             f"{REFRESH_TOKEN_PREFIX}:{refresh_token}",
-            json.dumps(user_data),
+            json.dumps(data),
             ex=settings.JWT_RF_TOKEN_EXPIRATION,
-        )
-
-    def _set_cookie_refresh_token(self, response: Response, refresh_token: str):
-        """Set the refresh token cookie in the response."""
-        response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
-            httponly=True,
-            secure=True,
-            samesite="strict",
-            max_age=settings.JWT_RF_TOKEN_EXPIRATION,
         )
 
     async def _get(self, session: AsyncSession, id: int) -> User | None:
@@ -182,7 +157,7 @@ class AuthService:
         # Cache miss -> Retrive from database
         # TODO: retrieve from database
 
-    async def _get_by_username(
+    async def get_by_username(
         self, session: AsyncSession, username: str
     ) -> User | None:
         """Returns a User by Username."""

@@ -11,6 +11,7 @@ from forum.auth.dependencies import (
 from forum.auth.exceptions import (
     EmailAlreadyExists,
     IncorrectPasswordOrUsername,
+    InvalidRefreshToken,
     UsernameAlreadyExists,
 )
 from forum.auth.schemas import (
@@ -30,6 +31,18 @@ user_router = APIRouter(prefix="/users", tags=["users"])
 log = logging.getLogger(__name__)
 
 
+def set_cookie_refresh_token(response: Response, refresh_token: str):
+    """Set the refresh token cookie in the response."""
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=settings.JWT_RF_TOKEN_EXPIRATION,
+    )
+
+
 @auth_router.post("/login", response_model=Token, status_code=status.HTTP_200_OK)
 async def login_endpoint(
     db_session: DbSession,
@@ -40,8 +53,9 @@ async def login_endpoint(
     """Login endpoint."""
     try:
         user_in = UserLogin(username=user_data.username, password=user_data.password)
-        user = await auth_service.authenticate(db_session, request, response, user_in)
-        return Token(access_token=user.token)
+        tokens = await auth_service.login(db_session, request.app.state.cache, user_in)
+        set_cookie_refresh_token(response, tokens.refresh_token)
+        return Token(access_token=tokens.access_token)
     except IncorrectPasswordOrUsername:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,
@@ -55,7 +69,6 @@ async def login_endpoint(
         )
 
 
-# HACK: Needs improving
 @auth_router.post("/refresh", response_model=Token)
 async def refresh_token_endpoint(request: Request, response: Response):
     rf_token = request.cookies.get("refresh_token")
@@ -63,8 +76,11 @@ async def refresh_token_endpoint(request: Request, response: Response):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "No refresh token found.")
 
     try:
-        refresh = await auth_service.refresh_authenticate(request, response, rf_token)
-        return Token(access_token=refresh)
+        tokens = await auth_service.refresh(request.app.state.cache, rf_token)
+        set_cookie_refresh_token(response, tokens.refresh_token)
+        return Token(access_token=tokens.access_token)
+    except InvalidRefreshToken:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid refresh token.")
     except Exception as e:
         log.error(e)
         raise HTTPException(
