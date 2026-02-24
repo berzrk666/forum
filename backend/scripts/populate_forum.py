@@ -133,11 +133,21 @@ gaming = Forum(
 )
 
 # Threads
-t1 = Thread(title="Hi everyone!", author=user3, forum=introductions)
-t2 = Thread(title="Hello", author=user2, forum=introductions)
-t3 = Thread(title="Ademir", author=admin, forum=introductions)
-t4 = Thread(title="Yo", author=mod, forum=introductions)
-t5 = Thread(title="o/", author=user5, forum=introductions)
+t1 = Thread(
+    title="Hi everyone!",
+    author=user3,
+    forum=introductions,
+    content="Hello everyone, I am user3",
+)
+t2 = Thread(
+    title="Hello",
+    author=user2,
+    forum=introductions,
+    content="Hello",
+)
+t3 = Thread(title="Ademir", author=admin, forum=introductions, content="I am ademir")
+t4 = Thread(title="Yo", author=mod, forum=introductions, content="Yoooooooo ;)")
+t5 = Thread(title="o/", author=user5, forum=introductions, content="o/ o/ \\o/")
 
 t6 = Thread(
     title="Forum Rules - Read First",
@@ -145,26 +155,62 @@ t6 = Thread(
     is_pinned=True,
     is_locked=True,
     forum=announcements,
+    content="There is no rules.",
 )
 
 t7 = Thread(
-    title="Looking for people to play Elden Ring Coop", author=user5, forum=gaming
+    title="Looking for people to play Elden Ring Coop",
+    author=user5,
+    forum=gaming,
+    content="add me on steam",
 )
-t8 = Thread(title="Anyone wanna play any game??", author=user3, forum=gaming)
+t8 = Thread(
+    title="Anyone wanna play any game??",
+    author=user3,
+    forum=gaming,
+    content="any games, any platforms, any skills",
+)
 
 t9 = Thread(
     title="Whats the difference between switches and hubs ?",
     author=user2,
     forum=networking,
+    content="What are their differences ? Or they are just the same ?",
 )
-t10 = Thread(title="RTX 4070ti or RX 7900 XT", author=user2, forum=hardware)
+t10 = Thread(
+    title="RTX 4070ti or RX 7900 XT",
+    author=user2,
+    forum=hardware,
+    content="Which one is the best in 2026? Will both run minecraft smoothly ?",
+)
 
-t11 = Thread(title="Cyberpunk benchmark", author=user, forum=hardware)
+t11 = Thread(
+    title="Cyberpunk benchmark",
+    author=user,
+    forum=hardware,
+    content="Benchmark comparions in cyberpunk with a GTX 690, i3-3990k",
+)
 
-t12 = Thread(title="Python or Go in 2026", author=user3, forum=programming)
-t13 = Thread(title="Python Resources", author=admin, forum=programming, is_pinned=True)
+t12 = Thread(
+    title="Python or Go in 2026",
+    author=user3,
+    forum=programming,
+    content="Which on should I prioritize this year ? I am no beginner programmer, but I am looking to learn something new; )",
+)
+t13 = Thread(
+    title="Python Resources",
+    author=admin,
+    forum=programming,
+    is_pinned=True,
+    content="Here are some good books for python: Python Book 1, Python Book 2, Python Book 3, ...",
+)
 
-t14 = Thread(title="Which country to travel in 2026?", author=user5, forum=lounge)
+t14 = Thread(
+    title="Which country to travel in 2026?",
+    author=user5,
+    forum=lounge,
+    content="Looking for some places to travel this year. What are your recommendations ?",
+)
 
 
 def create_users():

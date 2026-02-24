@@ -19,8 +19,8 @@ export const updateForum = (id, data) =>
 // Threads
 export const getThreadsByForum = (forum_id) => fetchAPI(`/forums/${forum_id}/threads`);
 export const getThread = (id) => fetchAPI(`/thread/${id}`);
-export const createThread = (title, forum_id) =>
-  fetchAPI("/thread/", { method: "POST", body: { title, forum_id } });
+export const createThread = (title, content, forum_id) =>
+  fetchAPI("/thread/", { method: "POST", body: { title, content, forum_id } });
 // Posts
 export const getPostsByThread = (thread_id) => fetchAPI(`/thread/${thread_id}/posts`);
 export const createPost = (thread_id, content) =>

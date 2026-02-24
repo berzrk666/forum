@@ -69,9 +69,7 @@ class ThreadService:
 
     async def pin(self, session: AsyncSession, id: int) -> Thread:
         """Pin a thread by ID."""
-        thread = await session.get(
-            Thread, id, options=[selectinload(Thread.author)]
-        )
+        thread = await session.get(Thread, id, options=[selectinload(Thread.author)])
         if thread is None:
             raise ThreadDoesNotExist
         thread.is_pinned = True
@@ -79,9 +77,7 @@ class ThreadService:
 
     async def unpin(self, session: AsyncSession, id: int) -> Thread:
         """Unpin a thread by ID."""
-        thread = await session.get(
-            Thread, id, options=[selectinload(Thread.author)]
-        )
+        thread = await session.get(Thread, id, options=[selectinload(Thread.author)])
         if thread is None:
             raise ThreadDoesNotExist
         thread.is_pinned = False
@@ -89,9 +85,7 @@ class ThreadService:
 
     async def lock(self, session: AsyncSession, id: int) -> Thread:
         """Lock a thread by ID."""
-        thread = await session.get(
-            Thread, id, options=[selectinload(Thread.author)]
-        )
+        thread = await session.get(Thread, id, options=[selectinload(Thread.author)])
         if thread is None:
             raise ThreadDoesNotExist
         thread.is_locked = True
@@ -99,9 +93,7 @@ class ThreadService:
 
     async def unlock(self, session: AsyncSession, id: int) -> Thread:
         """Unlock a thread by ID."""
-        thread = await session.get(
-            Thread, id, options=[selectinload(Thread.author)]
-        )
+        thread = await session.get(Thread, id, options=[selectinload(Thread.author)])
         if thread is None:
             raise ThreadDoesNotExist
         thread.is_locked = False

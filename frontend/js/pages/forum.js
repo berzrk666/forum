@@ -114,10 +114,14 @@ export async function mountForum() {
         <div class="form-box__header">Post New Thread</div>
         <div class="form-box__body">
           <div id="new-thread-error" class="form-error" style="display:none;"></div>
-          <form id="new-thread-form" style="display:flex; gap: var(--spacing-sm); align-items:flex-end;">
-            <div class="form-group" style="flex:1; margin-bottom:0;">
+          <form id="new-thread-form">
+            <div class="form-group">
               <label>Thread Title</label>
               <input type="text" id="thread-title" placeholder="Enter thread title" required maxlength="200">
+            </div>
+            <div class="form-group">
+              <label>Content</label>
+              <textarea id="thread-content" placeholder="Write the first post of your thread..." rows="6" required></textarea>
             </div>
             <button type="submit" class="btn btn--primary">Post Thread</button>
           </form>
@@ -177,7 +181,8 @@ export async function mountForum() {
       e.preventDefault();
       const errorEl = document.getElementById("new-thread-error");
       const title = document.getElementById("thread-title").value.trim();
-      if (!title) return;
+      const content = document.getElementById("thread-content").value.trim();
+      if (!title || !content) return;
 
       const submitBtn = form.querySelector("button[type=submit]");
       submitBtn.disabled = true;
@@ -185,7 +190,7 @@ export async function mountForum() {
 
       try {
         errorEl.style.display = "none";
-        await createThread(title, forumId);
+        await createThread(title, content, forumId);
         // Re-mount to refresh thread list
         await mountForum();
       } catch (err) {

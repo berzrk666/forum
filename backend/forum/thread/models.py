@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.types import String
+from sqlalchemy.types import String, Text
 from forum.database.core import Base, TimestampMixin
 
 if TYPE_CHECKING:
@@ -17,6 +17,7 @@ class Thread(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
     is_pinned: Mapped[bool] = mapped_column(default=False)
     is_locked: Mapped[bool] = mapped_column(default=False)
 

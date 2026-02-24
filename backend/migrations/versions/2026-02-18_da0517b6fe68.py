@@ -24,6 +24,7 @@ def upgrade() -> None:
     op.create_table('threads',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('content', sa.Text(), nullable=False),
     sa.Column('is_pinned', sa.Boolean(), nullable=False),
     sa.Column('is_locked', sa.Boolean(), nullable=False),
     sa.Column('author_id', sa.Integer(), nullable=False),

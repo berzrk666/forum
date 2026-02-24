@@ -19,11 +19,13 @@ class ThreadBase(BaseModel):
 
 class ThreadCreate(ThreadBase):
     forum_id: PositiveInt
+    content: str
 
 
 class ThreadRead(ThreadBase):
     id: int
     author: Author
+    content: str
     created_at: datetime
     is_pinned: bool
     is_locked: bool

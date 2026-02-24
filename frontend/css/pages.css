@@ -91,6 +91,48 @@
   gap: var(--spacing-sm);
 }
 
+/* ── Opening post (OP) ── */
+.post--op {
+  border-color: var(--color-primary);
+  border-width: 2px;
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  border-top: none;
+  margin-bottom: var(--spacing-lg);
+}
+
+.post--op .post__sidebar {
+  background: linear-gradient(to bottom, #e8f0fa, var(--color-bg-alt));
+}
+
+.post--op .post__header {
+  background: var(--color-bg-category-header);
+  color: var(--color-text-inverse);
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+.post--op .post__header a {
+  color: var(--color-text-inverse);
+}
+
+.post--op .post__username {
+  color: var(--color-primary);
+  font-size: 0.9rem;
+}
+
+.post--op .post__label {
+  display: inline-block;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  font-size: 0.65rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  margin-top: var(--spacing-xs);
+}
+
 /* ── Quick reply box ── */
 .quick-reply {
   background: var(--color-bg-content);
@@ -126,6 +168,12 @@
   border-radius: var(--border-radius);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-md);
+}
+
+.thread-header--attached {
+  border-bottom: none;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  margin-bottom: 0;
 }
 
 .thread-header__title {

@@ -78,7 +78,27 @@ export async function mountThread() {
       </div>`
     : "";
 
-  // Posts
+  // Opening post (thread content)
+  const opHtml = `
+    <div class="post post--op">
+      <div class="post__sidebar">
+        <div class="post__avatar">&#128100;</div>
+        <a href="#/profiles/${thread.author.id}" class="post__username">${escapeHtml(thread.author.username)}</a>
+        <div class="post__label">Thread Starter</div>
+      </div>
+      <div class="post__body">
+        <div class="post__header">
+          <span>${formatDate(thread.created_at)}</span>
+          <span>#1</span>
+        </div>
+        <div class="post__content">
+          ${formatContent(thread.content)}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Reply posts
   const postsHtml = posts.length > 0
     ? posts.map((post, idx) => `
         <div class="post">
@@ -89,7 +109,7 @@ export async function mountThread() {
           <div class="post__body">
             <div class="post__header">
               <span>${formatDate(post.created_at)}</span>
-              <span>#${idx + 1}</span>
+              <span>#${idx + 2}</span>
             </div>
             <div class="post__content">
               ${formatContent(post.content)}
@@ -97,7 +117,7 @@ export async function mountThread() {
           </div>
         </div>
       `).join("")
-    : `<p style="padding: var(--spacing-md); color: var(--color-text-light);">No posts yet. Be the first to reply!</p>`;
+    : "";
 
   // Reply section
   let replySection = "";
@@ -131,7 +151,7 @@ export async function mountThread() {
   }
 
   container.innerHTML = `
-    <div class="thread-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div class="thread-header thread-header--attached" style="display:flex; justify-content:space-between; align-items:flex-start; border-color: var(--color-primary); border-width: 2px 2px 0 2px; border-style: solid;">
       <div>
         <div class="thread-header__title">${escapeHtml(thread.title)}${badgesHtml}</div>
         <div class="thread-header__meta">
@@ -142,8 +162,8 @@ export async function mountThread() {
       </div>
       ${modButtons}
     </div>
-
     <div id="mod-error" class="form-error" style="display:none; margin-top: var(--spacing-sm);"></div>
+    ${opHtml}
 
     ${postsHtml}
 
