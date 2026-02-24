@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, timezone
 import logging
 import secrets
 
-from fastapi import Response
 import jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,15 +40,3 @@ def generate_jwt_token(user_id: int, role: str) -> str:
 def generate_refresh_token() -> str:
     """Generate a refresh token."""
     return secrets.token_urlsafe(32)
-
-
-def set_cookie_refresh_token(response: Response, refresh_token: str):
-    """Set the refresh token cookie in the response."""
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,
-        secure=True,
-        samesite="strict",
-        max_age=settings.JWT_RF_TOKEN_EXPIRATION,
-    )
