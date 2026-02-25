@@ -17,12 +17,14 @@ export const updateForum = (id, data) =>
   fetchAPI(`/forums/${id}`, { method: "PUT", body: data });
 
 // Threads
-export const getThreadsByForum = (forum_id) => fetchAPI(`/forums/${forum_id}/threads`);
+export const getThreadsByForum = (forum_id, page = 1, limit = 20) =>
+  fetchAPI(`/forums/${forum_id}/threads?page=${page}&limit=${limit}`);
 export const getThread = (id) => fetchAPI(`/thread/${id}`);
 export const createThread = (title, content, forum_id) =>
   fetchAPI("/thread/", { method: "POST", body: { title, content, forum_id } });
 // Posts
-export const getPostsByThread = (thread_id) => fetchAPI(`/thread/${thread_id}/posts`);
+export const getPostsByThread = (thread_id, page = 1, limit = 20) =>
+  fetchAPI(`/thread/${thread_id}/posts?page=${page}&limit=${limit}`);
 export const createPost = (thread_id, content) =>
   fetchAPI("/posts/", { method: "POST", body: { thread_id, content } });
 

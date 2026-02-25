@@ -1,5 +1,6 @@
 import logging
 
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import select
@@ -35,21 +36,35 @@ class ThreadService:
             log.error(f"Unexpected error when creating a new Thread {thread_in}: {e}")
             raise
 
-    async def list_threads(self, session: AsyncSession, forum_id: int) -> list[Thread]:
-        """List all threads under a forum."""
+    async def list_threads(
+        self, session: AsyncSession, forum_id: int, page: int, limit: int
+    ) -> tuple[list[Thread], int]:
+        """
+        List threads paginated under a forum.
+        Returns list of threads and number of total threads.
+        """
         forum = await session.get(Forum, forum_id)
         if forum is None:
             raise ForumDoesNotExist
 
         try:
+            count_st = (
+                select(func.count())
+                .select_from(Thread)
+                .where(Thread.forum_id == forum_id)
+            )
             st = (
                 select(Thread)
                 .where(Thread.forum_id == forum_id)
                 .options(selectinload(Thread.author))
                 .order_by(Thread.created_at.desc())
+                .offset((page - 1) * limit)
+                .limit(limit)
             )
+
             threads = await session.scalars(st)
-            return threads.all()  # type: ignore
+            total = await session.scalar(count_st) or 0
+            return threads.all(), total  # type: ignore
         except Exception as e:
             log.error(
                 f"Unexpected error when listing threads under Forum:{forum_id}: {e}"

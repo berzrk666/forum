@@ -1,6 +1,8 @@
 import logging
+import math
 
 from fastapi import APIRouter, HTTPException, status
+from pydantic.types import PositiveInt
 
 from forum.auth.dependencies import CurrentUser
 from forum.database.core import DbSession
@@ -38,12 +40,21 @@ async def create_post(
 
 
 @thread_router.get("/{id}/posts", response_model=PostPagination)
-async def list_thread_posts(db_session: DbSession, id: int):
+async def list_thread_posts(
+    db_session: DbSession, id: int, page: PositiveInt = 1, limit: PositiveInt = 10
+):
     """List all posts in a thread."""
     try:
-        posts = await srvc.list_posts(db_session, id)
+        posts, total_items = await srvc.list_posts(db_session, id, page, limit)
         posts_data = [PostRead.model_validate(p) for p in posts]
-        return PostPagination(data=posts_data)
+        page_size = len(posts)
+        return PostPagination(
+            page=page,
+            page_size=page_size,
+            total_items=total_items,
+            total_pages=math.ceil(total_items / limit) if total_items > 0 else 0,
+            data=posts_data,
+        )
     except Exception:
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"

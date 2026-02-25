@@ -7,6 +7,8 @@ import {
 } from "../api/admin.js";
 
 const MOD_ROLES = ["Admin", "Moderator"];
+const POSTS_PER_PAGE = 5;
+let currentPostPage = 1;
 
 function getForumContext() {
   try {
@@ -36,13 +38,18 @@ export function renderThread(threadId) {
 }
 
 export async function mountThread() {
+  currentPostPage = 1;
+  await loadThreadPage();
+}
+
+async function loadThreadPage() {
   const container = document.getElementById("thread-content");
   if (!container) return;
 
   const threadId = Number(container.dataset.threadId);
 
   try {
-  await _mountThreadInner(container, threadId);
+    await _mountThreadInner(container, threadId);
   } catch (err) {
     container.innerHTML = `
       <div class="form-box">
@@ -59,13 +66,17 @@ export async function mountThread() {
 async function _mountThreadInner(container, threadId) {
   let thread = null;
   let posts = [];
+  let totalPages = 1;
+  let totalItems = 0;
   try {
     const [threadData, postsData] = await Promise.all([
       getThread(threadId),
-      getPostsByThread(threadId),
+      getPostsByThread(threadId, currentPostPage, POSTS_PER_PAGE),
     ]);
     thread = threadData;
-    posts = postsData.data || postsData || [];
+    posts = postsData.data || [];
+    totalPages = postsData.total_pages || 1;
+    totalItems = postsData.total_items || 0;
   } catch (err) {
     container.innerHTML = `
       <div class="form-box">
@@ -155,7 +166,7 @@ async function _mountThreadInner(container, threadId) {
           <div class="post__body">
             <div class="post__header">
               <span>${formatDate(post.created_at)}</span>
-              <span>#${idx + 2}</span>
+              <span>#${(currentPostPage - 1) * POSTS_PER_PAGE + idx + 2}</span>
             </div>
             <div class="post__content">
               ${formatContent(post.content)}
@@ -203,7 +214,7 @@ async function _mountThreadInner(container, threadId) {
         <div class="thread-header__meta">
           Started by <strong><a href="#/profiles/${thread.author.id}">${escapeHtml(thread.author.username)}</a></strong>
           &middot; ${formatDate(thread.created_at)}
-          &middot; ${posts.length} ${posts.length === 1 ? "reply" : "replies"}
+          &middot; ${totalItems} ${totalItems === 1 ? "reply" : "replies"}
         </div>
       </div>
       ${modButtons}
@@ -213,7 +224,7 @@ async function _mountThreadInner(container, threadId) {
 
     ${postsHtml}
 
-    ${renderPagination(1, 1)}
+    ${renderPagination(currentPostPage, totalPages)}
 
     ${replySection}
   `;
@@ -233,13 +244,25 @@ async function _mountThreadInner(container, threadId) {
       try {
         errorEl.style.display = "none";
         await createPost(threadId, content);
-        await mountThread();
+        await loadThreadPage();
       } catch (err) {
         replyBtn.disabled = false;
         replyBtn.textContent = "Post Reply";
         errorEl.textContent = err.message;
         errorEl.style.display = "block";
       }
+    });
+  }
+
+  // Pagination click handler
+  const pagination = container.querySelector(".pagination");
+  if (pagination) {
+    pagination.addEventListener("click", async (e) => {
+      const item = e.target.closest(".pagination__item[data-page]");
+      if (!item || item.classList.contains("pagination__item--disabled") || item.classList.contains("pagination__item--active")) return;
+      currentPostPage = Number(item.dataset.page);
+      await loadThreadPage();
+      container.scrollIntoView({ behavior: "smooth" });
     });
   }
 
@@ -258,7 +281,7 @@ async function _mountThreadInner(container, threadId) {
         } else {
           await pinThread(threadId);
         }
-        await mountThread();
+        await loadThreadPage();
       } catch (err) {
         pinBtn.disabled = false;
         modError.textContent = err.message;
@@ -275,7 +298,7 @@ async function _mountThreadInner(container, threadId) {
         } else {
           await lockThread(threadId);
         }
-        await mountThread();
+        await loadThreadPage();
       } catch (err) {
         lockBtn.disabled = false;
         modError.textContent = err.message;

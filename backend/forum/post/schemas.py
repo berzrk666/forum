@@ -1,6 +1,7 @@
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
+from forum.schemas import Pagination
 from forum.thread.schemas import Author
 
 
@@ -22,5 +23,5 @@ class PostRead(PostBase):
     updated_at: datetime
 
 
-class PostPagination(BaseModel):
+class PostPagination(Pagination):
     data: list[PostRead]

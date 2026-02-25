@@ -29,7 +29,15 @@ export function renderForum(forumId) {
   `;
 }
 
+let currentPage = 1;
+const THREADS_PER_PAGE = 10;
+
 export async function mountForum() {
+  currentPage = 1;
+  await loadForumPage();
+}
+
+async function loadForumPage() {
   const container = document.getElementById("forum-content");
   if (!container) return;
 
@@ -38,13 +46,15 @@ export async function mountForum() {
   // Fetch forum info and threads in parallel
   let forum = null;
   let threads = [];
+  let totalPages = 1;
   try {
     const [forumsData, threadsData] = await Promise.all([
       getForums(),
-      getThreadsByForum(forumId),
+      getThreadsByForum(forumId, currentPage, THREADS_PER_PAGE),
     ]);
     forum = (forumsData.data || []).find((f) => f.id === forumId) || null;
     threads = threadsData.data || [];
+    totalPages = threadsData.total_pages || 1;
   } catch (err) {
     container.innerHTML = `
       <div class="form-box">
@@ -89,14 +99,14 @@ export async function mountForum() {
 
   const threadRows = threads.length > 0
     ? [...pinnedThreads, ...normalThreads].map((thread) => {
-        const pinned = thread.is_pinned;
-        const locked = thread.is_locked;
-        const rowStyle = pinned ? ` style="background-color: var(--color-sticky) !important;"` : "";
-        const prefix = pinned ? `<strong>[Sticky]</strong> ` : "";
-        const lockIcon = locked ? ` &#128274;` : "";
-        const icon = locked ? "&#128274;" : "&#128196;";
+      const pinned = thread.is_pinned;
+      const locked = thread.is_locked;
+      const rowStyle = pinned ? ` style="background-color: var(--color-sticky) !important;"` : "";
+      const prefix = pinned ? `<strong>[Sticky]</strong> ` : "";
+      const lockIcon = locked ? ` &#128274;` : "";
+      const icon = locked ? "&#128274;" : "&#128196;";
 
-        return `
+      return `
           <tr>
             <td class="forum-table__icon"${rowStyle}>${icon}</td>
             <td class="forum-table__title"${rowStyle}>
@@ -114,7 +124,7 @@ export async function mountForum() {
             </td>
           </tr>
         `;
-      }).join("")
+    }).join("")
     : `<tr>
         <td colspan="5" style="text-align:center; color: var(--color-text-muted); padding: var(--spacing-md);">
           No threads yet. Be the first to post!
@@ -173,7 +183,7 @@ export async function mountForum() {
       </table>
     </div>
 
-    ${renderPagination(1, 1)}
+    ${renderPagination(currentPage, totalPages)}
 
     ${newThreadSection}
   `;
@@ -184,6 +194,18 @@ export async function mountForum() {
     scrollBtn.addEventListener("click", () => {
       document.getElementById("new-thread-form")?.scrollIntoView({ behavior: "smooth" });
       document.getElementById("thread-title")?.focus();
+    });
+  }
+
+  // Pagination click handler
+  const pagination = container.querySelector(".pagination");
+  if (pagination) {
+    pagination.addEventListener("click", async (e) => {
+      const item = e.target.closest(".pagination__item[data-page]");
+      if (!item || item.classList.contains("pagination__item--disabled") || item.classList.contains("pagination__item--active")) return;
+      currentPage = Number(item.dataset.page);
+      await loadForumPage();
+      container.scrollIntoView({ behavior: "smooth" });
     });
   }
 

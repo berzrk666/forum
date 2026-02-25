@@ -3,11 +3,12 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.sql import func
 
 from forum.auth.models import User
 from forum.post.exceptions import ThreadIsLocked
 from forum.post.models import Post
-from forum.post.schemas import PostCreate
+from forum.post.schemas import PostCreate, PostPagination
 from forum.thread.exception import ThreadDoesNotExist
 from forum.thread.models import Thread
 
@@ -38,21 +39,32 @@ class PostService:
             log.error(f"Unexpected error when creating a new Post {post_in}: {e}")
             raise
 
-    async def list_posts(self, session: AsyncSession, id: int) -> list[Post]:
-        """List all posts from a thread."""
+    async def list_posts(
+        self, session: AsyncSession, id: int, page: int, limit: int
+    ) -> tuple[list[Post], int]:
+        """
+        List posts paginated from a thread.
+        Returns a list of posts and the total number of posts.
+        """
         thread = await session.get(Thread, id)
         if thread is None:
             raise ThreadDoesNotExist
-
         try:
+            count_st = (
+                select(func.count()).select_from(Post).where(Post.thread_id == id)
+            )
             st = (
                 select(Post)
                 .where(Post.thread_id == id)
                 .order_by(Post.created_at)
                 .options(selectinload(Post.author))
+                .offset((page - 1) * limit)
+                .limit(limit)
             )
-            posts = await session.scalars(st)
-            return posts  # type: ignore
+            posts = (await session.scalars(st)).all()
+            total = await session.scalar(count_st) or 0
+
+            return posts, total  # type: ignore
         except Exception as e:
             log.error(f"Unexpected error when listing all posts for Thread {id}: {e}")
             raise

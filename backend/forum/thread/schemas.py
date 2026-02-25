@@ -3,6 +3,8 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 from pydantic.types import PositiveInt
 
+from forum.schemas import Pagination
+
 
 class Author(BaseModel):
     id: int
@@ -31,5 +33,5 @@ class ThreadRead(ThreadBase):
     is_locked: bool
 
 
-class ThreadPagination(BaseModel):
+class ThreadPagination(Pagination):
     data: list[ThreadRead]

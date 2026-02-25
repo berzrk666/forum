@@ -1,4 +1,6 @@
+import math
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import PositiveInt
 
 from forum.auth.dependencies import CurrentUser, get_moderator_user
 from forum.database.core import DbSession
@@ -30,12 +32,21 @@ async def create_thread(
 
 
 @forum_router.get("/{id}/threads", response_model=ThreadPagination)
-async def list_threads_under_forum(db_session: DbSession, id: int):
-    """Create a thread."""
+async def list_threads_under_forum(
+    db_session: DbSession, id: int, page: PositiveInt = 1, limit: PositiveInt = 15
+):
+    """List threads paginated under a forum."""
     try:
-        threads = await srvc.list_threads(db_session, id)
+        threads, total_items = await srvc.list_threads(db_session, id, page, limit)
         threads_data = [ThreadRead.model_validate(t) for t in threads]
-        return ThreadPagination(data=threads_data)
+        page_size = len(threads)
+        return ThreadPagination(
+            page=page,
+            page_size=page_size,
+            total_items=total_items,
+            total_pages=math.ceil(total_items / limit) if total_items else 0,
+            data=threads_data,
+        )
     except Exception:
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
