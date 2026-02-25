@@ -3,10 +3,20 @@ import { renderPagination } from "../components/pagination.js";
 import { isLoggedIn } from "../state.js";
 import { getForums, getThreadsByForum, createThread } from "../api/admin.js";
 
+function getForumContext() {
+  try {
+    return JSON.parse(sessionStorage.getItem("current_forum"));
+  } catch {
+    return null;
+  }
+}
+
 export function renderForum(forumId) {
+  const stored = getForumContext();
+  const forumLabel = (stored && stored.id === forumId) ? stored.name : "Forum";
   const breadcrumb = renderBreadcrumb([
     { label: "Forum Home", href: "#/" },
-    { label: "Loading..." },
+    { label: forumLabel },
   ]);
 
   return `
@@ -59,6 +69,9 @@ export async function mountForum() {
     `;
     return;
   }
+
+  // Store forum context for thread breadcrumbs
+  sessionStorage.setItem("current_forum", JSON.stringify({ id: forum.id, name: forum.name }));
 
   // Update breadcrumb now that we have the forum name
   const breadcrumb = document.querySelector(".breadcrumb");

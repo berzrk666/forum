@@ -8,11 +8,22 @@ import {
 
 const MOD_ROLES = ["Admin", "Moderator"];
 
+function getForumContext() {
+  try {
+    return JSON.parse(sessionStorage.getItem("current_forum"));
+  } catch {
+    return null;
+  }
+}
+
 export function renderThread(threadId) {
-  const breadcrumb = renderBreadcrumb([
-    { label: "Forum Home", href: "#/" },
-    { label: "Loading..." },
-  ]);
+  const forum = getForumContext();
+  const crumbs = [{ label: "Forum Home", href: "#/" }];
+  if (forum) {
+    crumbs.push({ label: forum.name, href: `#/forum/${forum.id}` });
+  }
+  crumbs.push({ label: "Thread" });
+  const breadcrumb = renderBreadcrumb(crumbs);
 
   return `
     ${breadcrumb}
@@ -30,6 +41,22 @@ export async function mountThread() {
 
   const threadId = Number(container.dataset.threadId);
 
+  try {
+  await _mountThreadInner(container, threadId);
+  } catch (err) {
+    container.innerHTML = `
+      <div class="form-box">
+        <div class="form-box__header">Error</div>
+        <div class="form-box__body">
+          <p style="color: var(--color-error);">Something went wrong: ${escapeHtml(String(err))}</p>
+          <a href="#/" class="btn btn--primary" style="margin-top: var(--spacing-md);">Return Home</a>
+        </div>
+      </div>
+    `;
+  }
+}
+
+async function _mountThreadInner(container, threadId) {
   let thread = null;
   let posts = [];
   try {
@@ -38,7 +65,7 @@ export async function mountThread() {
       getPostsByThread(threadId),
     ]);
     thread = threadData;
-    posts = postsData.data || [];
+    posts = postsData.data || postsData || [];
   } catch (err) {
     container.innerHTML = `
       <div class="form-box">
@@ -52,12 +79,31 @@ export async function mountThread() {
     return;
   }
 
-  // Update breadcrumb
+  if (!thread) {
+    container.innerHTML = `
+      <div class="form-box">
+        <div class="form-box__header">Thread Not Found</div>
+        <div class="form-box__body">
+          <p>This thread does not exist.</p>
+          <a href="#/" class="btn btn--primary" style="margin-top: var(--spacing-md);">Return Home</a>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // Update breadcrumb with thread title
+  const forum = getForumContext();
   const breadcrumb = document.querySelector(".breadcrumb");
   if (breadcrumb) {
+    const forumCrumb = forum
+      ? `<a href="#/forum/${forum.id}" class="breadcrumb__item">${escapeHtml(forum.name)}</a>
+         <span class="breadcrumb__sep">&raquo;</span>`
+      : "";
     breadcrumb.innerHTML = `
       <a href="#/" class="breadcrumb__item">Forum Home</a>
       <span class="breadcrumb__sep">&raquo;</span>
+      ${forumCrumb}
       <span class="breadcrumb__item breadcrumb__item--active">${escapeHtml(thread.title)}</span>
     `;
   }
@@ -92,7 +138,7 @@ export async function mountThread() {
           <span>#1</span>
         </div>
         <div class="post__content">
-          ${formatContent(thread.content)}
+          ${formatContent(thread.content || "")}
         </div>
       </div>
     </div>

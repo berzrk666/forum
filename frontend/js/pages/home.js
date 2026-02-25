@@ -52,7 +52,7 @@ export async function mountHome() {
           <tr>
             <td class="forum-table__icon">&#128172;</td>
             <td class="forum-table__title">
-              <a href="#/forum/${forum.id}">${escapeHtml(forum.name)}</a>
+              <a href="#/forum/${forum.id}" data-forum-name="${escapeAttr(forum.name)}">${escapeHtml(forum.name)}</a>
               <div class="forum-table__description">${escapeHtml(forum.description)}</div>
             </td>
             <td class="forum-table__stat">0</td>
@@ -151,10 +151,28 @@ export async function mountHome() {
   html += sampleGroups;
 
   container.innerHTML = html;
+
+  // Store forum context on click for breadcrumbs
+  container.addEventListener("click", (e) => {
+    const link = e.target.closest("a[data-forum-name]");
+    if (!link) return;
+    const href = link.getAttribute("href");
+    const match = href.match(/#\/forum\/(\d+)/);
+    if (match) {
+      sessionStorage.setItem("current_forum", JSON.stringify({
+        id: Number(match[1]),
+        name: link.dataset.forumName,
+      }));
+    }
+  });
 }
 
 function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str;
   return div.innerHTML;
+}
+
+function escapeAttr(str) {
+  return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
