@@ -33,7 +33,7 @@ class TestThreadServiceCreate:
         self, thread_service: ThreadService, test_session, test_forum, test_user
     ):
         """A new thread should be created."""
-        t = ThreadCreate(title="Test", forum_id=test_forum.id)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id, content="test content")
         thread = await thread_service.create(test_session, t, test_user)
 
         assert thread
@@ -42,7 +42,7 @@ class TestThreadServiceCreate:
         self, thread_service: ThreadService, test_session, test_forum, test_user
     ):
         """Thread info is stored properly"""
-        t = ThreadCreate(title="Test", forum_id=test_forum.id)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id, content="test content")
         thread = await thread_service.create(test_session, t, test_user)
 
         assert thread.forum == test_forum
@@ -52,7 +52,7 @@ class TestThreadServiceCreate:
         self, thread_service: ThreadService, test_session, test_forum, test_user
     ):
         """Thread keeps information about who created the thread."""
-        t = ThreadCreate(title="Test", forum_id=test_forum.id)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id, content="test content")
         thread = await thread_service.create(test_session, t, test_user)
 
         assert thread.author == test_user
@@ -61,7 +61,7 @@ class TestThreadServiceCreate:
         self, thread_service: ThreadService, test_session, test_forum, test_user
     ):
         """Thread keeps information about which forum it belongs."""
-        t = ThreadCreate(title="Test", forum_id=test_forum.id)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id, content="test content")
         thread = await thread_service.create(test_session, t, test_user)
 
         assert thread.forum == test_forum
@@ -73,7 +73,7 @@ class TestThreadServiceCreate:
         ForumDoesNotExist is raised when attempting to create a
         Thread without an existing Forum.
         """
-        t = ThreadCreate(title="Test", forum_id=1)
+        t = ThreadCreate(title="Test", forum_id=1, content="test content")
         with pytest.raises(ForumDoesNotExist):
             await thread_service.create(test_session, t, test_user)
 
@@ -81,9 +81,9 @@ class TestThreadServiceCreate:
         self, thread_service: ThreadService, test_session, test_forum, test_user
     ):
         """Thread with duplicate name should exist."""
-        t = ThreadCreate(title="Test", forum_id=test_forum.id)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id, content="test content")
         thread1 = await thread_service.create(test_session, t, test_user)
-        t = ThreadCreate(title="Test", forum_id=test_forum.id)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id, content="test content")
         thread2 = await thread_service.create(test_session, t, test_user)
 
         assert thread1
@@ -94,32 +94,57 @@ class TestThreadServiceList:
     async def test_list_one_thread(
         self, thread_service: ThreadService, test_session, test_forum, test_user
     ):
-        t = ThreadCreate(title="Test", forum_id=test_forum.id)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id, content="test content")
         await thread_service.create(test_session, t, test_user)
 
-        threads = await thread_service.list_threads(test_session, test_forum.id)
+        threads, total = await thread_service.list_threads(
+            test_session, test_forum.id, page=1, limit=2
+        )
 
         assert threads
+        assert total
         assert len(threads) == 1
 
     async def test_list_multiple_threads(
         self, thread_service: ThreadService, test_session, test_forum, test_user
     ):
-        t = ThreadCreate(title="Test", forum_id=test_forum.id)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id, content="test content")
         await thread_service.create(test_session, t, test_user)
-        t = ThreadCreate(title="Test", forum_id=test_forum.id)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id, content="test content")
         await thread_service.create(test_session, t, test_user)
-        t = ThreadCreate(title="Test", forum_id=test_forum.id)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id, content="test content")
         await thread_service.create(test_session, t, test_user)
 
-        threads = await thread_service.list_threads(test_session, test_forum.id)
+        threads, total = await thread_service.list_threads(
+            test_session, test_forum.id, page=1, limit=3
+        )
 
-        assert threads
         assert len(threads) == 3
+        assert total == 3
 
     async def test_list_empty_returns_empty_list(
         self, thread_service: ThreadService, test_session, test_forum
     ):
-        threads = await thread_service.list_threads(test_session, test_forum.id)
+        threads, total = await thread_service.list_threads(
+            test_session, test_forum.id, page=1, limit=5
+        )
 
         assert threads == []
+        assert total == 0
+
+    async def test_list_threads_returns_remaining_items_on_last_page(
+        self, thread_service: ThreadService, test_session, test_forum, test_user
+    ):
+        t = ThreadCreate(title="Test", forum_id=test_forum.id, content="test content")
+        await thread_service.create(test_session, t, test_user)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id, content="test content")
+        await thread_service.create(test_session, t, test_user)
+        t = ThreadCreate(title="Test", forum_id=test_forum.id, content="test content")
+        await thread_service.create(test_session, t, test_user)
+
+        threads, total = await thread_service.list_threads(
+            test_session, test_forum.id, page=2, limit=2
+        )
+
+        assert len(threads) == 1
+        assert total == 3
