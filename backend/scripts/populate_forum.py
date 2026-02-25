@@ -21,57 +21,49 @@ log = logging.getLogger(__name__)
 
 engine = create_engine(str(settings.DATABASE_URI))
 
-# Roles
-role_admin = Role(name="admin")
-role_mod = Role(name="moderator")
-role_user = Role(name="user")
-
 # Users
 admin = User(
     username="admin",
     password=hash_password("admin"),
     email="admin@example.com",
-    role=role_admin,
+    role_id=3,
 )
 
 mod = User(
     username="moderator",
     password=hash_password("moderator"),
     email="moderator@example.com",
-    role=role_mod,
+    role_id=2,
 )
 
 user = User(
-    username="user",
-    password=hash_password("user"),
-    email="user@example.com",
-    role=role_user,
+    username="user", password=hash_password("user"), email="user@example.com", role_id=1
 )
 
 user2 = User(
     username="user2",
     password=hash_password("user2"),
     email="user2@example.com",
-    role=role_user,
+    role_id=1,
 )
 
 user3 = User(
     username="user3",
     password=hash_password("user3"),
     email="user3@example.com",
-    role=role_user,
+    role_id=1,
 )
 user4 = User(
     username="user4",
     password=hash_password("user4"),
     email="user4@example.com",
-    role=role_user,
+    role_id=1,
 )
 user5 = User(
     username="user5",
     password=hash_password("user5"),
     email="user5@example.com",
-    role=role_user,
+    role_id=1,
 )
 
 
@@ -212,6 +204,33 @@ t14 = Thread(
     content="Looking for some places to travel this year. What are your recommendations ?",
 )
 
+# Posts
+
+p1 = Post(content="I can play", author=user2, thread=t7)
+p2 = Post(content="I can play", author=user3, thread=t7)
+p3 = Post(content="I can play", author=user, thread=t7)
+p4 = Post(content="I can play", author=user4, thread=t7)
+p5 = Post(content="I can play", author=mod, thread=t7)
+p6 = Post(content="I can play", author=mod, thread=t7)
+p6 = Post(content="Just do not use hubs", author=admin, thread=t9)
+p7 = Post(content="Hubs are worse and insecure", author=mod, thread=t9)
+p8 = Post(content="Are hubs still being made ?", author=user3, thread=t9)
+p9 = Post(content="What is a hub ?", author=user5, thread=t9)
+p10 = Post(content="They can run minecraft smooth at 60fps ;)", author=mod, thread=t10)
+p11 = Post(content="Brazil", author=user2, thread=t14)
+p12 = Post(content="USA", author=admin, thread=t14)
+p13 = Post(content="Germany", author=mod, thread=t14)
+p14 = Post(content="Netherlands", author=user, thread=t14)
+p15 = Post(content="France", author=user3, thread=t14)
+p16 = Post(content="Spain", author=user4, thread=t14)
+p17 = Post(content="Python!", author=user4, thread=t12)
+p18 = Post(content="Python!", author=admin, thread=t12)
+p19 = Post(content="Python!", author=mod, thread=t12)
+p20 = Post(content="Python!", author=user, thread=t12)
+p21 = Post(content="Python!", author=user2, thread=t12)
+p22 = Post(content="Python!", author=user4, thread=t12)
+p23 = Post(content="Python!", author=user5, thread=t12)
+
 
 def create_users():
     """Create sample users."""
@@ -250,6 +269,38 @@ def create_threads():
         session.commit()
 
 
+def create_posts():
+    with Session(engine) as session:
+        session.add_all(
+            [
+                p1,
+                p2,
+                p3,
+                p4,
+                p5,
+                p6,
+                p7,
+                p8,
+                p9,
+                p10,
+                p11,
+                p12,
+                p13,
+                p14,
+                p15,
+                p16,
+                p17,
+                p18,
+                p19,
+                p20,
+                p21,
+                p22,
+                p23,
+            ]
+        )
+        session.commit()
+
+
 if __name__ == "__main__":
     log.info("Creating users")
     create_users()
@@ -263,3 +314,6 @@ if __name__ == "__main__":
     log.info("Creating threads")
     create_threads()
     log.info("Threads created successfully")
+    log.info("Creating posts")
+    create_posts()
+    log.info("Posts created successfully")
