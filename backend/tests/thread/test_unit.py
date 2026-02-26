@@ -261,3 +261,35 @@ class TestThreadServiceList:
             t = ThreadEditUser(content="New Content")
             with pytest.raises(ThreadDoesNotExist):
                 await thread_service.edit(test_session, 5, t, thread_owner)
+
+        async def test_mod_can_edit_any_thread(
+            self,
+            thread_service: ThreadService,
+            test_session,
+            test_forum,
+            new_thread,
+            test_mod,
+        ):
+            """A moderator should be able to edit anyone's thread."""
+            t = ThreadEditUser(title="New title", content="New content")
+
+            thread = await thread_service.edit(test_session, new_thread.id, t, test_mod)
+
+            assert thread.title == "New title"
+            assert thread.content == "New content"
+
+        async def test_adm_can_edit_any_thread(
+            self,
+            thread_service: ThreadService,
+            test_session,
+            test_forum,
+            new_thread,
+            test_adm,
+        ):
+            """A moderator should be able to edit anyone's thread."""
+            t = ThreadEditUser(title="New title", content="New content")
+
+            thread = await thread_service.edit(test_session, new_thread.id, t, test_adm)
+
+            assert thread.title == "New title"
+            assert thread.content == "New content"
