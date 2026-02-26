@@ -95,14 +95,11 @@ class TestAuthServiceLogin:
         self,
         auth_service: AuthService,
         test_session,
-        test_role,
         test_redis,
-        valid_user,
+        test_user,
         valid_login,
     ):
         """Tokens should be returned after authenticated."""
-        await auth_service.register(test_session, valid_user)
-
         tokens = await auth_service.login(test_session, test_redis, valid_login)
         assert tokens
 
@@ -111,12 +108,10 @@ class TestAuthServiceLogin:
         auth_service: AuthService,
         test_session,
         test_redis,
-        valid_user,
+        test_user,
         valid_login,
     ):
         """IncorrectPasswordOrUsername should be raised for wrong password."""
-        await auth_service.register(test_session, valid_user)
-
         login_data = valid_login
         login_data.password = "wrongpassword"
         with pytest.raises(IncorrectPasswordOrUsername):
@@ -127,12 +122,10 @@ class TestAuthServiceLogin:
         auth_service: AuthService,
         test_session,
         test_redis,
-        valid_user,
+        test_user,
         valid_login,
     ):
         """IncorrectPasswordOrUsername should be raised for wrong username."""
-        await auth_service.register(test_session, valid_user)
-
         login_data = valid_login
         login_data.username = "wrongusername"
         with pytest.raises(IncorrectPasswordOrUsername):

@@ -10,12 +10,13 @@ from forum.auth.schemas import UserCreate
 import forum.forum.models  # noqa: F401
 import forum.post.models  # noqa: F401
 import forum.thread.models  # noqa: F401
-from forum.auth.models import Role, User
+from forum.auth.models import Role, User, hash_password
 from forum.database.core import Base
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 VALID_USERNAME = "Testuser"
 VALID_PASSWORD = "Testpassword123"
+HASHED_VALID_PASSWORD = hash_password(VALID_PASSWORD)
 VALID_EMAIL = "testuser@email.com"
 
 
@@ -74,8 +75,24 @@ def mock_response():
 
 
 @pytest.fixture
-async def test_role(test_session) -> Role:
+async def test_user_role(test_session) -> Role:
     role = Role(id=1, name="User")
+    test_session.add(role)
+    await test_session.flush()
+    return role
+
+
+@pytest.fixture
+async def test_mod_role(test_session) -> Role:
+    role = Role(id=2, name="Moderator")
+    test_session.add(role)
+    await test_session.flush()
+    return role
+
+
+@pytest.fixture
+async def test_adm_role(test_session) -> Role:
+    role = Role(id=3, name="Admin")
     test_session.add(role)
     await test_session.flush()
     return role
@@ -87,9 +104,12 @@ def valid_user(user_data) -> UserCreate:
 
 
 @pytest.fixture
-async def test_user(test_session):
+async def test_user(test_session, test_user_role):
     u = User(
-        username=VALID_USERNAME, email=VALID_EMAIL, password=VALID_PASSWORD.encode()
+        username=VALID_USERNAME,
+        email=VALID_EMAIL,
+        password=HASHED_VALID_PASSWORD,
+        role=test_user_role,
     )
     test_session.add(u)
     await test_session.flush()
@@ -102,6 +122,32 @@ async def test_user2(test_session):
         username=VALID_USERNAME + "2",
         email=VALID_EMAIL.replace("user", "user2"),
         password=VALID_PASSWORD.encode(),
+    )
+    test_session.add(u)
+    await test_session.flush()
+    return u
+
+
+@pytest.fixture
+async def test_mod(test_session, test_mod_role):
+    u = User(
+        username="moderator",
+        email="moderator@example.com",
+        password=VALID_PASSWORD,
+        role=test_mod_role,
+    )
+    test_session.add(u)
+    await test_session.flush()
+    return u
+
+
+@pytest.fixture
+async def test_adm(test_session, test_adm_role):
+    u = User(
+        username="admin",
+        email="admin@example.com",
+        password=VALID_PASSWORD,
+        role=test_adm_role,
     )
     test_session.add(u)
     await test_session.flush()
