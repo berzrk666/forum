@@ -18,7 +18,7 @@ from forum.auth.exceptions import (
     UsernameAlreadyExists,
 )
 from forum.auth.models import User, hash_password, verify_hash
-from forum.auth.schemas import TokenResponse, UserCreate, UserLogin
+from forum.auth.schemas import TokenResponse, UserCreate, UserLogin, UserRead
 from forum.auth.utils import generate_jwt_token, generate_refresh_token
 from forum.config import settings
 
@@ -30,13 +30,15 @@ REFRESH_TOKEN_PREFIX = "rf_token"
 
 
 class AuthService:
-    async def register(self, session: AsyncSession, user_in: UserCreate) -> User:
+    async def register(
+        self, session: AsyncSession, user_in: UserCreate, cache: Redis
+    ) -> User:
         """Register a new User."""
         user = User(**user_in.model_dump(exclude={"password"}))
         user.set_password(user_in.password)
         user.role_id = 1  # TODO: remove hardcode
 
-        return await self._create(session, user)
+        return await self._create(session, user, cache)
 
     async def login(
         self, session: AsyncSession, cache: Redis, user_in: UserLogin
@@ -176,12 +178,13 @@ class AuthService:
         )
         return res.scalar()
 
-    async def _create(self, session: AsyncSession, user: User) -> User:
+    async def _create(self, session: AsyncSession, user: User, cache: Redis) -> User:
         """Create a new User in database."""
         try:
             session.add(user)
             await session.flush()
             await session.refresh(user, ["role"])
+            await self._cache_new_user(cache, user, 5)
             return user
         except IntegrityError as e:
             detail = str(e.orig)
@@ -192,6 +195,21 @@ class AuthService:
         except Exception as e:
             log.error(f"Unexpected error when creating {user!r}: {e}")
             raise
+
+    async def _cache_new_user(self, cache: Redis, user: User, last_n: int):
+        """
+        Store the new recent user in cache to keep
+        track of the last N registered users.
+        """
+        key = "recent_users"
+        user_data = UserRead.model_validate(user)
+        try:
+            async with cache.pipeline(transaction=True) as pipe:
+                await pipe.lpush(key, user_data.model_dump_json())  # type: ignore
+                await pipe.ltrim(key, 0, last_n - 1)  # type: ignore
+                await pipe.execute()
+        except Exception as e:
+            log.error(f"Error during caching new user: {user}: {e}")
 
 
 auth = AuthService()

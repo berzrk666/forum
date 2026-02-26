@@ -2,6 +2,7 @@ import { fetchAPI } from "./client.js";
 
 export const getUsers = (page = 1, limit = 20) =>
   fetchAPI(`/users/?page=${page}&limit=${limit}`);
+export const getDashboardStats = () => fetchAPI("/dashboard");
 
 // Categories
 export const getCategories = () => fetchAPI("/categories/");

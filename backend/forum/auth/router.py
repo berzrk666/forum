@@ -93,10 +93,10 @@ async def refresh_token_endpoint(request: Request, response: Response):
 @auth_router.post(
     "/register", response_model=Token, status_code=status.HTTP_201_CREATED
 )
-async def register_user(db_session: DbSession, user_in: UserCreate):
+async def register_user(db_session: DbSession, user_in: UserCreate, request: Request):
     """Register user endpoint."""
     try:
-        user = await auth_service.register(db_session, user_in)
+        user = await auth_service.register(db_session, user_in, request.app.state.cache)
         return Token(access_token=user.token)
     except UsernameAlreadyExists:
         raise HTTPException(status.HTTP_409_CONFLICT, "Username already exists")

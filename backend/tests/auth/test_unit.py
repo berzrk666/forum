@@ -18,49 +18,51 @@ def auth_service():
 
 
 class TestAuthServiceRegister:
-    async def test_register_user_success(self, auth_service, test_session, valid_user):
+    async def test_register_user_success(
+        self, auth_service, test_session, valid_user, test_redis
+    ):
         """Registering a User should be returned"""
-        user = await auth_service.register(test_session, valid_user)
+        user = await auth_service.register(test_session, valid_user, test_redis)
 
         assert user
 
     async def test_register_user_username_stored(
-        self, auth_service, test_session, valid_user
+        self, auth_service, test_session, valid_user, test_redis
     ):
         """Registering a User's username should be saved"""
-        user = await auth_service.register(test_session, valid_user)
+        user = await auth_service.register(test_session, valid_user, test_redis)
 
         assert user.username == VALID_USERNAME
 
     async def test_register_user_email_stored(
-        self, auth_service, test_session, valid_user
+        self, auth_service, test_session, valid_user, test_redis
     ):
         """Registering a User's email should be saved"""
-        user = await auth_service.register(test_session, valid_user)
+        user = await auth_service.register(test_session, valid_user, test_redis)
 
         assert user.email == VALID_EMAIL
 
     async def test_register_user_has_an_id(
-        self, auth_service, test_session, valid_user
+        self, auth_service, test_session, valid_user, test_redis
     ):
         """Registering a User gets an ID"""
-        user = await auth_service.register(test_session, valid_user)
+        user = await auth_service.register(test_session, valid_user, test_redis)
 
         assert user.id is not None
 
     async def test_register_user_plain_password_not_stored(
-        self, auth_service, test_session, valid_user
+        self, auth_service, test_session, valid_user, test_redis
     ):
         """Registering a User should not store the password in plain text."""
-        user = await auth_service.register(test_session, valid_user)
+        user = await auth_service.register(test_session, valid_user, test_redis)
 
         assert user.password != VALID_PASSWORD
 
     async def test_register_duplicate_username(
-        self, auth_service, test_session, valid_user
+        self, auth_service, test_session, valid_user, test_redis
     ):
         """register should raise UsernameAlreadyExists"""
-        user1 = await auth_service.register(test_session, valid_user)
+        user1 = await auth_service.register(test_session, valid_user, test_redis)
 
         assert user1, "A user should be created"
 
@@ -68,13 +70,13 @@ class TestAuthServiceRegister:
         user2.email = "newemail@email.com"
 
         with pytest.raises(UsernameAlreadyExists):
-            await auth_service.register(test_session, valid_user)
+            await auth_service.register(test_session, valid_user, test_redis)
 
     async def test_register_duplicate_email(
-        self, auth_service, test_session, valid_user
+        self, auth_service, test_session, valid_user, test_redis
     ):
         """register should raise EmailAlreadyExists"""
-        user1 = await auth_service.register(test_session, valid_user)
+        user1 = await auth_service.register(test_session, valid_user, test_redis)
 
         assert user1, "A user should be created"
 
@@ -82,7 +84,7 @@ class TestAuthServiceRegister:
         user2.username = "com"
 
         with pytest.raises(EmailAlreadyExists):
-            await auth_service.register(test_session, valid_user)
+            await auth_service.register(test_session, valid_user, test_redis)
 
 
 @pytest.fixture

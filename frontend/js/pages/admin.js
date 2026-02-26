@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from "../components/breadcrumb.js";
 import { isLoggedIn, getRole } from "../state.js";
-import { getUsers, getCategories, createCategory, deleteCategory, getForums, createForum, updateForum } from "../api/admin.js";
+import { getUsers, getDashboardStats, getCategories, createCategory, deleteCategory, getForums, createForum, updateForum } from "../api/admin.js";
 
 const ADMIN_ROLES = ["admin", "moderator"];
 
@@ -174,34 +174,30 @@ async function renderSection(section) {
 
 async function renderDashboard(container) {
   try {
-    const data = await getUsers(1, 5);
-    const users = data.data || [];
+    const stats = await getDashboardStats();
+    const recentUsers = stats.recent_users || [];
 
     container.innerHTML = `
       <div class="stats-grid">
         <div class="stat-box">
-          <div class="stat-box__value">${data.total_items || 0}</div>
+          <div class="stat-box__value">${stats.n_users}</div>
           <div class="stat-box__label">Users</div>
         </div>
         <div class="stat-box">
-          <div class="stat-box__value">0</div>
+          <div class="stat-box__value">${stats.n_categories}</div>
           <div class="stat-box__label">Categories</div>
         </div>
         <div class="stat-box">
-          <div class="stat-box__value">0</div>
+          <div class="stat-box__value">${stats.n_forums}</div>
           <div class="stat-box__label">Forums</div>
         </div>
         <div class="stat-box">
-          <div class="stat-box__value">0</div>
+          <div class="stat-box__value">${stats.n_threads}</div>
           <div class="stat-box__label">Threads</div>
         </div>
         <div class="stat-box">
-          <div class="stat-box__value">0</div>
+          <div class="stat-box__value">${stats.n_posts}</div>
           <div class="stat-box__label">Posts</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-box__value">0</div>
-          <div class="stat-box__label">Reports</div>
         </div>
       </div>
 
@@ -218,7 +214,7 @@ async function renderDashboard(container) {
                   </tr>
                 </thead>
                 <tbody>
-                  ${renderUserRowsCompact(users.slice(0, 5))}
+                  ${renderUserRowsCompact(recentUsers)}
                 </tbody>
               </table>
             </div>
