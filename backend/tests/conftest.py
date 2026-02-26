@@ -121,7 +121,7 @@ async def test_user2(test_session):
     u = User(
         username=VALID_USERNAME + "2",
         email=VALID_EMAIL.replace("user", "user2"),
-        password=VALID_PASSWORD.encode(),
+        password=HASHED_VALID_PASSWORD,
     )
     test_session.add(u)
     await test_session.flush()
@@ -133,7 +133,7 @@ async def test_mod(test_session, test_mod_role):
     u = User(
         username="moderator",
         email="moderator@example.com",
-        password=VALID_PASSWORD,
+        password=HASHED_VALID_PASSWORD,
         role=test_mod_role,
     )
     test_session.add(u)
@@ -146,7 +146,7 @@ async def test_adm(test_session, test_adm_role):
     u = User(
         username="admin",
         email="admin@example.com",
-        password=VALID_PASSWORD,
+        password=HASHED_VALID_PASSWORD,
         role=test_adm_role,
     )
     test_session.add(u)
