@@ -6,8 +6,8 @@ from pydantic.types import PositiveInt
 
 from forum.auth.dependencies import CurrentUser
 from forum.database.core import DbSession
-from forum.post.exceptions import ThreadIsLocked
-from forum.post.schemas import PostCreate, PostPagination, PostRead
+from forum.post.exceptions import PostDoesNotExist, PostNotOwner, ThreadIsLocked
+from forum.post.schemas import PostCreate, PostEditUser, PostPagination, PostRead
 from forum.post.service import post_service as srvc
 from forum.thread.exception import ThreadDoesNotExist
 from forum.thread.router import thread_router
@@ -56,6 +56,30 @@ async def list_thread_posts(
             data=posts_data,
         )
     except Exception:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
+        )
+
+
+@post_router.patch(
+    "/{id}/edit", response_model=PostRead, status_code=status.HTTP_200_OK
+)
+async def edit_post(
+    db_session: DbSession, id: int, post_in: PostEditUser, current_user: CurrentUser
+):
+    """Edit a post."""
+    try:
+        return await srvc.edit(db_session, id, current_user, post_in)
+    except PostDoesNotExist:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Post does not exist")
+    except PostNotOwner:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED, "You can not edit a post you do not own"
+        )
+    except Exception as e:
+        log.error(
+            f"Unexpected error when updating Post <{id}> with <{post_in}> : <{e}>"
+        )
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
         )

@@ -32,7 +32,7 @@ async def init_roles(session: AsyncSession):
 def generate_jwt_token(user_id: int, role: str) -> str:
     """Generate a JWT token"""
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRATION)
-    to_encode = TokenData(sub=str(user_id), exp=expire, role=role)
+    to_encode = TokenData(sub=str(user_id), exp=expire, role=role.lower())
 
     return jwt.encode(to_encode.model_dump(), settings.JWT_KEY, settings.JWT_ALG)
 

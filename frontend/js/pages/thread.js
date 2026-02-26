@@ -2,7 +2,7 @@ import { renderBreadcrumb } from "../components/breadcrumb.js";
 import { renderPagination } from "../components/pagination.js";
 import { isLoggedIn, getRole, getUserId } from "../state.js";
 import {
-  getThread, getPostsByThread, createPost, editThread,
+  getThread, getPostsByThread, createPost, editThread, editPost,
   pinThread, unpinThread, lockThread, unlockThread,
 } from "../api/admin.js";
 
@@ -164,23 +164,31 @@ async function _mountThreadInner(container, threadId) {
 
   // Reply posts
   const postsHtml = posts.length > 0
-    ? posts.map((post, idx) => `
-        <div class="post">
-          <div class="post__sidebar">
-            <div class="post__avatar">&#128100;</div>
-            <a href="#/profiles/${post.author.id}" class="post__username">${escapeHtml(post.author.username)}</a>
-          </div>
-          <div class="post__body">
-            <div class="post__header">
-              <span>${formatDate(post.created_at)}</span>
-              <span>#${(currentPostPage - 1) * POSTS_PER_PAGE + idx + 2}</span>
+    ? posts.map((post, idx) => {
+        const postIsOwner = isLoggedIn() && String(post.author.id) === getUserId();
+        const canEditPost = postIsOwner || isMod;
+        const postEditBtn = canEditPost
+          ? `<div class="post__footer"><button class="btn btn--sm btn-edit-post" data-post-id="${post.id}">Edit</button></div>`
+          : "";
+        return `
+          <div class="post">
+            <div class="post__sidebar">
+              <div class="post__avatar">&#128100;</div>
+              <a href="#/profiles/${post.author.id}" class="post__username">${escapeHtml(post.author.username)}</a>
             </div>
-            <div class="post__content">
-              ${formatContent(post.content)}
+            <div class="post__body">
+              <div class="post__header">
+                <span>${formatDate(post.created_at)}</span>
+                <span>#${(currentPostPage - 1) * POSTS_PER_PAGE + idx + 2}</span>
+              </div>
+              <div class="post__content" id="post-content-${post.id}">
+                ${formatContent(post.content)}
+              </div>
+              ${postEditBtn}
             </div>
           </div>
-        </div>
-      `).join("")
+        `;
+      }).join("")
     : "";
 
   // Reply section
@@ -334,6 +342,61 @@ async function _mountThreadInner(container, threadId) {
       });
     });
   }
+
+  // Edit post handlers
+  container.querySelectorAll(".btn-edit-post").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const postId = Number(btn.dataset.postId);
+      const post = posts.find((p) => p.id === postId);
+      if (!post) return;
+
+      const contentEl = document.getElementById(`post-content-${postId}`);
+      if (!contentEl) return;
+
+      contentEl.innerHTML = `
+        <div id="edit-post-error-${postId}" class="form-error" style="display:none;"></div>
+        <div class="form-group" style="margin-bottom: var(--spacing-sm);">
+          <textarea id="edit-post-textarea-${postId}" rows="6" style="width:100%;">${escapeHtml(post.content || "")}</textarea>
+        </div>
+        <div style="display:flex; gap: var(--spacing-sm);">
+          <button class="btn btn--primary btn--sm" id="btn-save-post-${postId}">Save</button>
+          <button class="btn btn--sm" id="btn-cancel-post-${postId}">Cancel</button>
+        </div>
+      `;
+
+      btn.style.display = "none";
+
+      document.getElementById(`btn-cancel-post-${postId}`).addEventListener("click", () => {
+        loadThreadPage();
+      });
+
+      document.getElementById(`btn-save-post-${postId}`).addEventListener("click", async () => {
+        const newContent = document.getElementById(`edit-post-textarea-${postId}`).value.trim();
+        const errorEl = document.getElementById(`edit-post-error-${postId}`);
+
+        if (!newContent) {
+          errorEl.textContent = "Content is required.";
+          errorEl.style.display = "block";
+          return;
+        }
+
+        const saveBtn = document.getElementById(`btn-save-post-${postId}`);
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Saving...";
+
+        try {
+          errorEl.style.display = "none";
+          await editPost(postId, newContent);
+          await loadThreadPage();
+        } catch (err) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Save";
+          errorEl.textContent = err.message;
+          errorEl.style.display = "block";
+        }
+      });
+    });
+  });
 
   // Mount moderation button handlers
   if (isMod) {

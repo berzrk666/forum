@@ -6,9 +6,9 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import func
 
 from forum.auth.models import User
-from forum.post.exceptions import ThreadIsLocked
+from forum.post.exceptions import PostDoesNotExist, PostNotOwner, ThreadIsLocked
 from forum.post.models import Post
-from forum.post.schemas import PostCreate, PostPagination
+from forum.post.schemas import PostCreate, PostEditUser
 from forum.thread.exception import ThreadDoesNotExist
 from forum.thread.models import Thread
 
@@ -68,6 +68,38 @@ class PostService:
         except Exception as e:
             log.error(f"Unexpected error when listing all posts for Thread {id}: {e}")
             raise
+
+    async def get(self, session: AsyncSession, id: int) -> Post:
+        """Retrieve a post from database. Raises PostDoesNotExist."""
+        post = await session.get(
+            Post, id, options=[selectinload(Post.author), selectinload(Post.thread)]
+        )
+        if post is None:
+            raise PostDoesNotExist
+        return post
+
+    async def edit(
+        self, session: AsyncSession, id: int, user: User, post_in: PostEditUser
+    ) -> Post:
+        """
+        Update a post. Only allows for editing owned posts or if user
+        is a moderator or admin.
+
+        Returns the updated post.
+        """
+        post = await self.get(session, id)
+
+        if post.author != user and not user.is_moderator():
+            raise PostNotOwner
+
+        log.debug(f"Post {id} modified by {user}")
+        data = post_in.model_dump()
+        for field, value in data.items():
+            if value is not None:
+                setattr(post, field, value)
+        await session.flush()
+        await session.refresh(post)
+        return post
 
 
 post_service = PostService()

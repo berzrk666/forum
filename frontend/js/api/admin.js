@@ -29,6 +29,8 @@ export const getPostsByThread = (thread_id, page = 1, limit = 20) =>
   fetchAPI(`/thread/${thread_id}/posts?page=${page}&limit=${limit}`);
 export const createPost = (thread_id, content) =>
   fetchAPI("/posts/", { method: "POST", body: { thread_id, content } });
+export const editPost = (id, content) =>
+  fetchAPI(`/posts/${id}/edit`, { method: "PATCH", body: { content } });
 
 export const pinThread = (id) => fetchAPI(`/thread/${id}/pin`, { method: "PATCH" });
 export const unpinThread = (id) => fetchAPI(`/thread/${id}/unpin`, { method: "PATCH" });

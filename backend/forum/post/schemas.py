@@ -23,5 +23,11 @@ class PostRead(PostBase):
     updated_at: datetime
 
 
+class PostEditUser(BaseModel):
+    content: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class PostPagination(Pagination):
     data: list[PostRead]

@@ -1,3 +1,5 @@
+import logging
+
 from datetime import datetime
 from typing import Annotated, AsyncGenerator
 
@@ -11,6 +13,8 @@ from forum.config import settings
 
 Base = declarative_base()
 
+log = logging.getLogger(__name__)
+
 engine = create_async_engine(str(settings.DATABASE_URI))
 sessionlocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -22,6 +26,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         yield session
         await session.commit()
     except Exception:
+        log.warning("Database rollback")
         await session.rollback()
         raise
     finally:

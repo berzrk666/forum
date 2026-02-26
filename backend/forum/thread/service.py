@@ -130,8 +130,6 @@ class ThreadService:
             await session.flush()
             await session.refresh(thread)
             return thread
-        except ThreadDoesNotExist:
-            raise
         except Exception as e:
             log.error(f"Error while trying to edit the Thread {id}: {e}")
             raise
