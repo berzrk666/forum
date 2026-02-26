@@ -44,9 +44,9 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 async def get_moderator_user(current_user: CurrentUser):
     """Validate  if user is at least a moderator."""
-    if current_user.role.name in ["Moderator", "Admin"]:
-        return current_user
-    raise HTTPException(status.HTTP_401_UNAUTHORIZED, "You must be a moderator")
+    if not current_user.is_moderator():
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "You must be a moderator")
+    return current_user
 
 
 ModeratorUser = Annotated[User, Depends(get_moderator_user)]
@@ -54,9 +54,9 @@ ModeratorUser = Annotated[User, Depends(get_moderator_user)]
 
 async def get_admin_user(current_user: CurrentUser):
     """Validate  if user is an Admin."""
-    if current_user.role.name == "Admin":
-        return current_user
-    raise HTTPException(status.HTTP_401_UNAUTHORIZED, "You must be an admin")
+    if not current_user.is_admin():
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "You must be an admin")
+    return current_user
 
 
 AdminUser = Annotated[User, Depends(get_admin_user)]

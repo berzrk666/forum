@@ -67,6 +67,7 @@ export async function fetchAPI(endpoint, { method = "GET", body } = {}, isRetry 
     method,
     headers: {},
     credentials: "include", // Always include cookies
+    cache: "no-store",
   };
 
   const token = localStorage.getItem("auth_token");

@@ -1,6 +1,6 @@
 import { isLoggedIn, getUser, getRole, clearToken } from "../state.js";
 
-const ADMIN_ROLES = ["Admin", "Moderator"];
+const ADMIN_ROLES = ["admin", "moderator"];
 
 export function renderHeader() {
   const loggedIn = isLoggedIn();

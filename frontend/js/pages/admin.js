@@ -2,7 +2,7 @@ import { renderBreadcrumb } from "../components/breadcrumb.js";
 import { isLoggedIn, getRole } from "../state.js";
 import { getUsers, getCategories, createCategory, deleteCategory, getForums, createForum, updateForum } from "../api/admin.js";
 
-const ADMIN_ROLES = ["Admin", "Moderator"];
+const ADMIN_ROLES = ["admin", "moderator"];
 
 function canAccessAdmin() {
   return isLoggedIn() && ADMIN_ROLES.includes(getRole());

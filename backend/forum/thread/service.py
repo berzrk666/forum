@@ -8,9 +8,9 @@ from sqlalchemy.sql import select
 from forum.auth.models import User
 from forum.forum.exceptions import ForumDoesNotExist
 from forum.forum.models import Forum
-from forum.thread.exception import ThreadDoesNotExist
+from forum.thread.exception import ThreadDoesNotExist, ThreadNotOwner
 from forum.thread.models import Thread
-from forum.thread.schemas import ThreadCreate
+from forum.thread.schemas import ThreadCreate, ThreadEditUser
 
 log = logging.getLogger(__name__)
 
@@ -113,6 +113,28 @@ class ThreadService:
             raise ThreadDoesNotExist
         thread.is_locked = False
         return thread
+
+    async def edit(
+        self, session: AsyncSession, id: int, thread_in: ThreadEditUser, user: User
+    ) -> Thread:
+        """Edit a thread."""
+        thread = await self.get(session, id)
+        if thread.author != user and not user.is_moderator():
+            raise ThreadNotOwner
+        try:
+            data = thread_in.model_dump()
+            for field, value in data.items():
+                if value is not None:
+                    setattr(thread, field, value)
+
+            await session.flush()
+            await session.refresh(thread)
+            return thread
+        except ThreadDoesNotExist:
+            raise
+        except Exception as e:
+            log.error(f"Error while trying to edit the Thread {id}: {e}")
+            raise
 
 
 thread_service = ThreadService()

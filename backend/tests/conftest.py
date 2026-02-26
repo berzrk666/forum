@@ -94,3 +94,15 @@ async def test_user(test_session):
     test_session.add(u)
     await test_session.flush()
     return u
+
+
+@pytest.fixture
+async def test_user2(test_session):
+    u = User(
+        username=VALID_USERNAME + "2",
+        email=VALID_EMAIL.replace("user", "user2"),
+        password=VALID_PASSWORD.encode(),
+    )
+    test_session.add(u)
+    await test_session.flush()
+    return u

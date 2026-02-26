@@ -1,12 +1,12 @@
 import { renderBreadcrumb } from "../components/breadcrumb.js";
 import { renderPagination } from "../components/pagination.js";
-import { isLoggedIn, getRole } from "../state.js";
+import { isLoggedIn, getRole, getUserId } from "../state.js";
 import {
-  getThread, getPostsByThread, createPost,
+  getThread, getPostsByThread, createPost, editThread,
   pinThread, unpinThread, lockThread, unlockThread,
 } from "../api/admin.js";
 
-const MOD_ROLES = ["Admin", "Moderator"];
+const MOD_ROLES = ["admin", "moderator"];
 const POSTS_PER_PAGE = 5;
 let currentPostPage = 1;
 
@@ -136,6 +136,12 @@ async function _mountThreadInner(container, threadId) {
     : "";
 
   // Opening post (thread content)
+  const isOwner = isLoggedIn() && String(thread.author.id) === getUserId();
+  const canEdit = isOwner || isMod;
+  const editBtn = canEdit
+    ? `<div class="post__footer"><button class="btn btn--sm" id="btn-edit-thread">Edit</button></div>`
+    : "";
+
   const opHtml = `
     <div class="post post--op">
       <div class="post__sidebar">
@@ -148,9 +154,10 @@ async function _mountThreadInner(container, threadId) {
           <span>${formatDate(thread.created_at)}</span>
           <span>#1</span>
         </div>
-        <div class="post__content">
+        <div class="post__content" id="op-content">
           ${formatContent(thread.content || "")}
         </div>
+        ${editBtn}
       </div>
     </div>
   `;
@@ -266,6 +273,68 @@ async function _mountThreadInner(container, threadId) {
     });
   }
 
+  // Edit thread handler
+  const editBtnEl = document.getElementById("btn-edit-thread");
+  if (editBtnEl) {
+    editBtnEl.addEventListener("click", () => {
+      const opContent = document.getElementById("op-content");
+      const titleEl = container.querySelector(".thread-header__title");
+      if (!opContent || !titleEl) return;
+
+      // Replace title with input
+      const titleText = thread.title;
+      titleEl.innerHTML = `<input type="text" id="edit-title" value="${escapeAttr(titleText)}" style="width:100%; font-size:1.1rem; font-weight:bold;">`;
+
+      // Replace content with textarea and buttons
+      opContent.innerHTML = `
+        <div id="edit-error" class="form-error" style="display:none;"></div>
+        <div class="form-group" style="margin-bottom: var(--spacing-sm);">
+          <textarea id="edit-content" rows="8" style="width:100%;">${escapeHtml(thread.content || "")}</textarea>
+        </div>
+        <div style="display:flex; gap: var(--spacing-sm);">
+          <button class="btn btn--primary btn--sm" id="btn-save-edit">Save</button>
+          <button class="btn btn--sm" id="btn-cancel-edit">Cancel</button>
+        </div>
+      `;
+
+      // Hide the edit button
+      editBtnEl.style.display = "none";
+
+      // Cancel
+      document.getElementById("btn-cancel-edit").addEventListener("click", () => {
+        loadThreadPage();
+      });
+
+      // Save
+      document.getElementById("btn-save-edit").addEventListener("click", async () => {
+        const newTitle = document.getElementById("edit-title").value.trim();
+        const newContent = document.getElementById("edit-content").value.trim();
+        const errorEl = document.getElementById("edit-error");
+
+        if (!newTitle || !newContent) {
+          errorEl.textContent = "Title and content are required.";
+          errorEl.style.display = "block";
+          return;
+        }
+
+        const saveBtn = document.getElementById("btn-save-edit");
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Saving...";
+
+        try {
+          errorEl.style.display = "none";
+          await editThread(threadId, newTitle, newContent);
+          await loadThreadPage();
+        } catch (err) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Save";
+          errorEl.textContent = err.message;
+          errorEl.style.display = "block";
+        }
+      });
+    });
+  }
+
   // Mount moderation button handlers
   if (isMod) {
     const pinBtn = document.getElementById("btn-pin");
@@ -330,4 +399,8 @@ function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str;
   return div.innerHTML;
+}
+
+function escapeAttr(str) {
+  return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

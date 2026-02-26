@@ -52,6 +52,18 @@ class User(Base, TimestampMixin):
             raise ValueError("Password cannot be empty")
         self.password = hash_password(password)
 
+    def is_moderator(self) -> bool:
+        """True if user have a moderator role."""
+        if self.role is None:
+            return False
+        return self.role.name.lower() in ["moderator", "admin"]
+
+    def is_admin(self) -> bool:
+        """True if user have an admin role."""
+        if self.role is None:
+            return False
+        return self.role.name.lower() == "admin"
+
     @property
     def token(self) -> str:
         """Generate a JWT Token for the User."""

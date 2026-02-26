@@ -4,9 +4,10 @@ from pydantic import PositiveInt
 
 from forum.auth.dependencies import CurrentUser, get_moderator_user
 from forum.database.core import DbSession
-from forum.thread.exception import ThreadDoesNotExist
+from forum.thread.exception import ThreadDoesNotExist, ThreadNotOwner
 from forum.thread.schemas import (
     ThreadCreate,
+    ThreadEditUser,
     ThreadPagination,
     ThreadRead,
 )
@@ -133,6 +134,30 @@ async def unlock_thread(db_session: DbSession, id: int):
         return await srvc.unlock(db_session, id)
     except ThreadDoesNotExist:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Thread does not exist.")
+    except Exception:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
+        )
+
+
+@thread_router.patch(
+    "/{id}/edit",
+    status_code=status.HTTP_200_OK,
+    response_model=ThreadRead,
+)
+async def edit_thread(
+    db_session: DbSession, id: int, thread_in: ThreadEditUser, current_user: CurrentUser
+):
+    """Edit an existing thread."""
+    try:
+        return await srvc.edit(db_session, id, thread_in, current_user)
+    except ThreadDoesNotExist:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Thread does not exist.")
+    except ThreadNotOwner:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "You can not edit a thread you did not create.",
+        )
     except Exception:
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"

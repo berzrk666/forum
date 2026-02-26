@@ -22,6 +22,8 @@ export const getThreadsByForum = (forum_id, page = 1, limit = 20) =>
 export const getThread = (id) => fetchAPI(`/thread/${id}`);
 export const createThread = (title, content, forum_id) =>
   fetchAPI("/thread/", { method: "POST", body: { title, content, forum_id } });
+export const editThread = (id, title, content) =>
+  fetchAPI(`/thread/${id}/edit`, { method: "PATCH", body: { title, content } });
 // Posts
 export const getPostsByThread = (thread_id, page = 1, limit = 20) =>
   fetchAPI(`/thread/${thread_id}/posts?page=${page}&limit=${limit}`);

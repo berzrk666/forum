@@ -33,5 +33,14 @@ class ThreadRead(ThreadBase):
     is_locked: bool
 
 
+class ThreadEditUser(BaseModel):
+    """Pydantic schema when a user update their own thread."""
+
+    title: str | None = None
+    content: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ThreadPagination(Pagination):
     data: list[ThreadRead]
