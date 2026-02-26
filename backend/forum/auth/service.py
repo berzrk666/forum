@@ -117,15 +117,25 @@ class AuthService:
             return True
         raise InsufficientPermission
 
-    async def list_users(self, session: AsyncSession) -> tuple[list[User], int]:
-        """List all users."""
+    async def list_users(
+        self, session: AsyncSession, page: int, limit: int
+    ) -> tuple[list[User], int]:
+        """
+        List users paginated.
+        Returns a list of users and the total number of users.
+        """
         try:
-            st = select(User).options(joinedload(User.role))
+            st = (
+                select(User)
+                .options(joinedload(User.role))
+                .offset((page - 1) * limit)
+                .limit(limit)
+            )
             count_st = select(func.count()).select_from(User)
             res = await session.scalars(st)
             total = await session.scalar(count_st) or 0
 
-            return (res.all(), total)  # type: ignore
+            return res.all(), total  # type: ignore
         except Exception as e:
             log.error("Unexpected error during user listing: ", e)
             raise

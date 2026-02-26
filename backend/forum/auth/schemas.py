@@ -40,7 +40,7 @@ class UserRead(UserBase):
 class UserPagination(Pagination):
     """Pydantic model for paginated results of Users."""
 
-    items: list[UserRead]
+    data: list[UserRead]
 
 
 class Token(BaseModel):

@@ -1,6 +1,7 @@
 import { fetchAPI } from "./client.js";
 
-export const getUsers = () => fetchAPI("/users/");
+export const getUsers = (page = 1, limit = 20) =>
+  fetchAPI(`/users/?page=${page}&limit=${limit}`);
 
 // Categories
 export const getCategories = () => fetchAPI("/categories/");

@@ -174,13 +174,13 @@ async function renderSection(section) {
 
 async function renderDashboard(container) {
   try {
-    const data = await getUsers();
-    const users = data.items || [];
+    const data = await getUsers(1, 5);
+    const users = data.data || [];
 
     container.innerHTML = `
       <div class="stats-grid">
         <div class="stat-box">
-          <div class="stat-box__value">${users.length}</div>
+          <div class="stat-box__value">${data.total_items || 0}</div>
           <div class="stat-box__label">Users</div>
         </div>
         <div class="stat-box">
@@ -704,7 +704,7 @@ async function renderForums(container) {
 async function renderUsers(container) {
   try {
     const data = await getUsers();
-    const users = data.items || [];
+    const users = data.data || [];
 
     container.innerHTML = `
       <div class="admin-toolbar">
@@ -717,7 +717,7 @@ async function renderUsers(container) {
       </div>
 
       <div class="category-group">
-        <div class="category-group__header">All Users (${users.length})</div>
+        <div class="category-group__header">All Users (${data.total_items || 0})</div>
         <div class="forum-table">
           <table>
             <thead>

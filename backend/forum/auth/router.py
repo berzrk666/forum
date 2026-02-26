@@ -1,8 +1,10 @@
 import logging
+import math
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
+from pydantic import PositiveInt
 
 from forum.auth.dependencies import (
     CurrentUser,
@@ -109,11 +111,20 @@ async def register_user(db_session: DbSession, user_in: UserCreate):
 @user_router.get(
     "/", response_model=UserPagination, dependencies=[Depends(get_moderator_user)]
 )
-async def read_users(db_session: DbSession):
+async def read_users(
+    db_session: DbSession, page: PositiveInt = 1, limit: PositiveInt = 10
+):
     try:
-        users, total = await auth_service.list_users(db_session)
+        users, total = await auth_service.list_users(db_session, page, limit)
         users_read = [UserRead.model_validate(u) for u in users]
-        return UserPagination(itemPerPage=total, page=1, total=total, items=users_read)
+        page_size = len(users)
+        return UserPagination(
+            page=page,
+            page_size=page_size,
+            total_items=total,
+            total_pages=math.ceil(total / limit) if total > 0 else 0,
+            data=users_read,
+        )
     except Exception:
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
