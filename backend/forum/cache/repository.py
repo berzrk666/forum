@@ -8,7 +8,9 @@ log = logging.getLogger(__name__)
 
 RECENT_USERS_KEY = "recent_users"
 LAST_N = 10
-USER_POSTS_KEY = "user_posts:"
+USER_POSTS_KEY = "user_posts"
+FORUM_POSTS_KEY = "forum_posts"
+FORUM_THREADS_KEY = "forum_threads"
 
 
 class CacheRepository:
@@ -31,9 +33,51 @@ class CacheRepository:
         users = await cache.lrange(RECENT_USERS_KEY, 0, LAST_N)  # type: ignore
         return [UserRead.model_validate_json(user) for user in users]
 
-    async def get_user_total_posts(self, cache: Redis, id: int) -> int | None:
+    async def on_post_created(self, cache: Redis, user_id: int, forum_id: int):
+        """
+        Update cache after a post is created.
+        Increments user total posts and a forum total posts.
+        """
+        async with cache.pipeline() as pipe:
+            await pipe.incr(f"{USER_POSTS_KEY}:{user_id}")
+            await pipe.incr(f"{FORUM_POSTS_KEY}:{forum_id}")
+            await pipe.execute()
+
+    async def on_post_deleted(self, cache: Redis, user_id: int, forum_id: int):
+        """
+        Update cache after a post is deleted.
+        Decrements user total posts and a forum total posts.
+        """
+        async with cache.pipeline() as pipe:
+            await pipe.incr(f"{USER_POSTS_KEY}:{user_id}")
+            await pipe.incr(f"{FORUM_POSTS_KEY}:{forum_id}")
+            await pipe.execute()
+
+    async def on_thread_created(self, cache: Redis, forum_id: int):
+        """
+        Update cache after a thread is created.
+        Incremets forum total threads.
+        """
+        await cache.incr(f"{FORUM_THREADS_KEY}:{forum_id}")
+
+    async def on_thread_deleted(self, cache: Redis, forum_id: int):
+        """
+        Update cache after a thread is deleted.
+        Deletes forum total threads.
+        """
+        await cache.decr(f"{FORUM_THREADS_KEY}:{forum_id}")
+
+    async def get_user_total_posts(self, cache: Redis, user_id: int) -> int | None:
         """Get the total number of posts of a user."""
-        return await cache.get(f"{USER_POSTS_KEY}:{id}")
+        return await cache.get(f"{USER_POSTS_KEY}:{user_id}")
+
+    async def get_forum_posts(self, cache: Redis, forum_id: int):
+        """Get the total number of posts under a forum."""
+        return await cache.get(f"{FORUM_POSTS_KEY}:{forum_id}")
+
+    async def get_forum_threads(self, cache: Redis, forum_id: int):
+        """Get the total number of threads under a forum."""
+        return await cache.get(f"{FORUM_THREADS_KEY}:{forum_id}")
 
 
 cache_repo = CacheRepository()
