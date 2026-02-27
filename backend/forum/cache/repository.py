@@ -8,6 +8,7 @@ log = logging.getLogger(__name__)
 
 RECENT_USERS_KEY = "recent_users"
 LAST_N = 10
+USER_POSTS_KEY = "user_posts:"
 
 
 class CacheRepository:
@@ -29,6 +30,10 @@ class CacheRepository:
         """Retrieve the recent 10 registered users."""
         users = await cache.lrange(RECENT_USERS_KEY, 0, LAST_N)  # type: ignore
         return [UserRead.model_validate_json(user) for user in users]
+
+    async def get_user_total_posts(self, cache: Redis, id: int) -> int | None:
+        """Get the total number of posts of a user."""
+        return await cache.get(f"{USER_POSTS_KEY}:{id}")
 
 
 cache_repo = CacheRepository()
