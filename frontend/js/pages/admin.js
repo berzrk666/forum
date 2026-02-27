@@ -1,8 +1,11 @@
 import { renderBreadcrumb } from "../components/breadcrumb.js";
+import { renderPagination } from "../components/pagination.js";
 import { isLoggedIn, getRole } from "../state.js";
 import { getUsers, getDashboardStats, getCategories, createCategory, deleteCategory, getForums, createForum, updateForum } from "../api/admin.js";
 
 const ADMIN_ROLES = ["admin", "moderator"];
+const USERS_PER_PAGE = 20;
+let currentUsersPage = 1;
 
 function canAccessAdmin() {
   return isLoggedIn() && ADMIN_ROLES.includes(getRole());
@@ -699,8 +702,9 @@ async function renderForums(container) {
 
 async function renderUsers(container) {
   try {
-    const data = await getUsers();
+    const data = await getUsers(currentUsersPage, USERS_PER_PAGE);
     const users = data.data || [];
+    const totalPages = data.total_pages || 1;
 
     container.innerHTML = `
       <div class="admin-toolbar">
@@ -744,7 +748,19 @@ async function renderUsers(container) {
           </table>
         </div>
       </div>
+
+      ${renderPagination(currentUsersPage, totalPages)}
     `;
+
+    const pagination = container.querySelector(".pagination");
+    if (pagination) {
+      pagination.addEventListener("click", async (e) => {
+        const item = e.target.closest(".pagination__item[data-page]");
+        if (!item || item.classList.contains("pagination__item--disabled") || item.classList.contains("pagination__item--active")) return;
+        currentUsersPage = Number(item.dataset.page);
+        await renderUsers(container);
+      });
+    }
   } catch (err) {
     container.innerHTML = `<p style="color: var(--color-error);">${escapeHtml(err.message)}</p>`;
   }
