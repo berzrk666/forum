@@ -1,0 +1,34 @@
+import logging
+
+from redis.asyncio import Redis
+
+from forum.auth.schemas import UserRead
+
+log = logging.getLogger(__name__)
+
+RECENT_USERS_KEY = "recent_users"
+LAST_N = 10
+
+
+class CacheRepository:
+    """Manage caching"""
+
+    async def push_recent_user(self, cache: Redis, user: UserRead):
+        """Push user to cache to keep track of the recent users."""
+        user_data = UserRead.model_validate(user)
+        try:
+            async with cache.pipeline(transaction=True) as pipe:
+                await pipe.lpush(RECENT_USERS_KEY, user_data.model_dump_json())  # type: ignore
+                await pipe.ltrim(RECENT_USERS_KEY, 0, LAST_N - 1)  # type: ignore
+                await pipe.execute()
+            log.info(f"Cached {user}")
+        except Exception as e:
+            log.error(f"Error during caching new user: {user}: {e}")
+
+    async def get_recent_users(self, cache: Redis) -> list[UserRead]:
+        """Retrieve the recent 10 registered users."""
+        users = await cache.lrange(RECENT_USERS_KEY, 0, LAST_N)  # type: ignore
+        return [UserRead.model_validate_json(user) for user in users]
+
+
+cache_repo = CacheRepository()

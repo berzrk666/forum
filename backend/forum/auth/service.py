@@ -18,8 +18,9 @@ from forum.auth.exceptions import (
     UsernameAlreadyExists,
 )
 from forum.auth.models import User, hash_password, verify_hash
-from forum.auth.schemas import TokenResponse, UserCreate, UserLogin, UserRead
+from forum.auth.schemas import TokenResponse, UserCreate, UserLogin
 from forum.auth.utils import generate_jwt_token, generate_refresh_token
+from forum.cache.repository import cache_repo
 from forum.config import settings
 
 log = logging.getLogger(__name__)
@@ -184,7 +185,7 @@ class AuthService:
             session.add(user)
             await session.flush()
             await session.refresh(user, ["role"])
-            await self._cache_new_user(cache, user, 5)
+            await cache_repo.push_recent_user(cache, user)
             return user
         except IntegrityError as e:
             detail = str(e.orig)
@@ -195,21 +196,6 @@ class AuthService:
         except Exception as e:
             log.error(f"Unexpected error when creating {user!r}: {e}")
             raise
-
-    async def _cache_new_user(self, cache: Redis, user: User, last_n: int):
-        """
-        Store the new recent user in cache to keep
-        track of the last N registered users.
-        """
-        key = "recent_users"
-        user_data = UserRead.model_validate(user)
-        try:
-            async with cache.pipeline(transaction=True) as pipe:
-                await pipe.lpush(key, user_data.model_dump_json())  # type: ignore
-                await pipe.ltrim(key, 0, last_n - 1)  # type: ignore
-                await pipe.execute()
-        except Exception as e:
-            log.error(f"Error during caching new user: {user}: {e}")
 
 
 auth = AuthService()

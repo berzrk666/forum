@@ -6,7 +6,7 @@ from fakeredis.aioredis import FakeRedis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import forum.auth.models  # noqa: F401
-from forum.auth.schemas import UserCreate
+from forum.auth.schemas import UserCreate, UserRead
 import forum.forum.models  # noqa: F401
 import forum.post.models  # noqa: F401
 import forum.thread.models  # noqa: F401
@@ -152,3 +152,8 @@ async def test_adm(test_session, test_adm_role):
     test_session.add(u)
     await test_session.flush()
     return u
+
+
+@pytest.fixture
+async def test_readuser(test_user):
+    return UserRead.model_validate(test_user)

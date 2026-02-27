@@ -1,12 +1,11 @@
-import json
 import logging
 
-from redis.client import Redis
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func, select
 
 from forum.auth.models import User
-from forum.auth.schemas import UserRead
+from forum.cache.repository import cache_repo
 from forum.category.models import Category
 from forum.dashboard.schemas import DashboardStats
 from forum.forum.models import Forum
@@ -29,7 +28,7 @@ class DashboardService:
                 select(func.count()).select_from(Post).scalar_subquery(),
             )
             res = (await session.execute(stmt)).one()
-            users = await self._get_last_N_registered_users(cache, 10)
+            users = await cache_repo.get_recent_users(cache)
 
             return DashboardStats(
                 n_users=res[0],
@@ -42,13 +41,6 @@ class DashboardService:
         except Exception as e:
             log.debug(e)
             raise
-
-    async def _get_last_N_registered_users(
-        self, cache: Redis, last_n: int
-    ) -> list[UserRead]:
-        key = "recent_users"
-        users = await cache.lrange(key, 0, last_n)  # type: ignore
-        return [UserRead.model_validate_json(user) for user in users]
 
 
 dash_service = DashboardService()
