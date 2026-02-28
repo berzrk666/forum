@@ -30,7 +30,7 @@ class CacheRepository:
 
     async def get_recent_users(self, cache: Redis) -> list[UserRead]:
         """Retrieve the recent 10 registered users."""
-        users = await cache.lrange(RECENT_USERS_KEY, 0, LAST_N)  # type: ignore
+        users = await cache.lrange(RECENT_USERS_KEY, 0, LAST_N - 1)  # type: ignore
         return [UserRead.model_validate_json(user) for user in users]
 
     async def on_post_created(self, cache: Redis, user_id: int, forum_id: int):
