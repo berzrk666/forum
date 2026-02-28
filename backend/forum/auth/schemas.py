@@ -12,6 +12,7 @@ from forum.schemas import Pagination
 class UserBase(BaseModel):
     """Base Pydantic model for User."""
 
+    # TODO: Remember to add validators
     username: str
 
     # Allows conversion from SQLAlchemy to Pydantic Model
@@ -27,6 +28,7 @@ class UserLogin(UserBase):
 class UserCreate(UserBase):
     """Pydantic model for User creation."""
 
+    # TODO: Remember to add validators
     email: EmailStr
     username: str
     password: str
