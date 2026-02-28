@@ -1,5 +1,6 @@
 import logging
 
+from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -11,13 +12,14 @@ from forum.post.models import Post
 from forum.post.schemas import PostCreate, PostEditUser
 from forum.thread.exception import ThreadDoesNotExist
 from forum.thread.models import Thread
+from forum.cache.repository import cache_repo
 
 log = logging.getLogger(__name__)
 
 
 class PostService:
     async def create(
-        self, session: AsyncSession, post_in: PostCreate, author: User
+        self, session: AsyncSession, cache: Redis, post_in: PostCreate, author: User
     ) -> Post:
         """Create a post."""
         thread = await session.get(Thread, post_in.thread_id)
@@ -34,6 +36,9 @@ class PostService:
             session.add(post)
             await session.flush()
             await session.refresh(post)
+            await cache_repo.on_post_created(
+                cache, post.author_id, post.thread.forum_id
+            )
             return post
         except Exception as e:
             log.error(f"Unexpected error when creating a new Post {post_in}: {e}")

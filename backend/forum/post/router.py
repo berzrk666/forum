@@ -1,7 +1,7 @@
 import logging
 import math
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic.types import PositiveInt
 
 from forum.auth.dependencies import CurrentUser
@@ -19,11 +19,16 @@ post_router = APIRouter(prefix="/posts", tags=["posts"])
 
 @post_router.post("/", response_model=PostRead)
 async def create_post(
-    db_session: DbSession, current_user: CurrentUser, post_in: PostCreate
+    db_session: DbSession,
+    request: Request,
+    current_user: CurrentUser,
+    post_in: PostCreate,
 ):
     """Create a post under a thread"""
     try:
-        post = await srvc.create(db_session, post_in, current_user)
+        post = await srvc.create(
+            db_session, request.app.state.cache, post_in, current_user
+        )
         return post
 
     except ThreadDoesNotExist:

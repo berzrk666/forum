@@ -20,6 +20,8 @@ class ForumRead(ForumBase):
     id: int
     order: PositiveInt
     category: CategoryRead
+    n_posts: int = 0
+    n_threads: int = 0
 
 
 class ForumEdit(BaseModel):

@@ -10,6 +10,7 @@ from forum.category.models import Category
 from forum.forum.exceptions import CategoryDoesNotExist, ForumDoesNotExist
 from forum.forum.models import Forum
 from forum.forum.schemas import ForumCreate, ForumEdit, ForumRead
+from forum.cache.repository import cache_repo
 
 log = logging.getLogger(__name__)
 

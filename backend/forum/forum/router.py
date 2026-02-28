@@ -1,11 +1,12 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from forum.auth.dependencies import get_admin_user
 from forum.database.core import DbSession
 from forum.forum.exceptions import CategoryDoesNotExist, ForumDoesNotExist
 from forum.forum.schemas import ForumCreate, ForumEdit, ForumPagination, ForumRead
 from forum.forum.service import forum_service as srvc
+from forum.cache.repository import cache_repo
 
 log = logging.getLogger(__name__)
 
@@ -30,13 +31,21 @@ async def create_forum(db_session: DbSession, forum_in: ForumCreate):
 
 
 @forum_router.get("/", response_model=ForumPagination)
-async def list_all_forums(db_session: DbSession):
+async def list_all_forums(db_session: DbSession, request: Request):
     """List all forums."""
+    cache = request.app.state.cache
     try:
         forums = await srvc.list(db_session)
-        forums_data = [ForumRead.model_validate(f) for f in forums]
+        forums_data = []
+        for forum in forums:
+            forum_read = ForumRead.model_validate(forum, strict=False)
+            forum_read.n_posts, forum_read.n_threads = await cache_repo.on_forum_read(
+                cache, forum_read.id
+            )
+            forums_data.append(forum_read)
         return ForumPagination(data=forums_data)
-    except Exception:
+    except Exception as e:
+        log.error(e)
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
         )

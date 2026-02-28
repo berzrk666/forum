@@ -1,5 +1,6 @@
 import logging
 
+from redis.asyncio import Redis
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -11,13 +12,14 @@ from forum.forum.models import Forum
 from forum.thread.exception import ThreadDoesNotExist, ThreadNotOwner
 from forum.thread.models import Thread
 from forum.thread.schemas import ThreadCreate, ThreadEditUser
+from forum.cache.repository import cache_repo
 
 log = logging.getLogger(__name__)
 
 
 class ThreadService:
     async def create(
-        self, session: AsyncSession, thread_in: ThreadCreate, author: User
+        self, session: AsyncSession, cache: Redis, thread_in: ThreadCreate, author: User
     ):
         """Create a new Thread."""
         forum = await session.get(Forum, thread_in.forum_id)
@@ -31,6 +33,7 @@ class ThreadService:
             session.add(thread)
             await session.flush()
             await session.refresh(thread)
+            await cache_repo.on_thread_created(cache, forum.id)
             return thread
         except Exception as e:
             log.error(f"Unexpected error when creating a new Thread {thread_in}: {e}")

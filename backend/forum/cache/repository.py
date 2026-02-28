@@ -67,17 +67,20 @@ class CacheRepository:
         """
         await cache.decr(f"{FORUM_THREADS_KEY}:{forum_id}")
 
+    async def on_forum_read(self, cache: Redis, forum_id: int) -> tuple[int, int]:
+        """
+        Read cache for forum.
+        Returns the total posts of a forum and the number of threads.
+        """
+        async with cache.pipeline(transaction=False) as pipe:
+            await pipe.get(f"{FORUM_POSTS_KEY}:{forum_id}")
+            await pipe.get(f"{FORUM_THREADS_KEY}:{forum_id}")
+            res = await pipe.execute()
+        return (res[0] or 0, res[1] or 0)
+
     async def get_user_total_posts(self, cache: Redis, user_id: int) -> int | None:
         """Get the total number of posts of a user."""
         return await cache.get(f"{USER_POSTS_KEY}:{user_id}")
-
-    async def get_forum_posts(self, cache: Redis, forum_id: int):
-        """Get the total number of posts under a forum."""
-        return await cache.get(f"{FORUM_POSTS_KEY}:{forum_id}")
-
-    async def get_forum_threads(self, cache: Redis, forum_id: int):
-        """Get the total number of threads under a forum."""
-        return await cache.get(f"{FORUM_THREADS_KEY}:{forum_id}")
 
 
 cache_repo = CacheRepository()

@@ -55,8 +55,8 @@ export async function mountHome() {
               <a href="#/forum/${forum.id}" data-forum-name="${escapeAttr(forum.name)}">${escapeHtml(forum.name)}</a>
               <div class="forum-table__description">${escapeHtml(forum.description)}</div>
             </td>
-            <td class="forum-table__stat">0</td>
-            <td class="forum-table__stat">0</td>
+            <td class="forum-table__stat">${forum.n_threads}</td>
+            <td class="forum-table__stat">${forum.n_posts}</td>
             <td class="forum-table__lastpost" style="color: var(--color-text-muted);">No posts yet</td>
           </tr>
         `).join("")
@@ -101,8 +101,8 @@ export async function mountHome() {
             <a href="#/category/${forum.id}">${forum.name}</a>
             <div class="forum-table__description">${forum.description}</div>
           </td>
-          <td class="forum-table__stat">${forum.threads}</td>
-          <td class="forum-table__stat">${forum.posts}</td>
+          <td class="forum-table__stat">${forum.n_threads}</td>
+          <td class="forum-table__stat">${forum.n_posts}</td>
           <td class="forum-table__lastpost">
             <a href="#">${forum.lastPost.thread}</a><br>
             by <strong>${forum.lastPost.author}</strong><br>

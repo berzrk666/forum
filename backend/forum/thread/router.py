@@ -1,5 +1,5 @@
 import math
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import PositiveInt
 
 from forum.auth.dependencies import CurrentUser, get_moderator_user
@@ -20,11 +20,16 @@ thread_router = APIRouter(prefix="/thread", tags=["threads"])
 
 @thread_router.post("/", response_model=ThreadRead)
 async def create_thread(
-    db_session: DbSession, thread_in: ThreadCreate, current_user: CurrentUser
+    db_session: DbSession,
+    request: Request,
+    thread_in: ThreadCreate,
+    current_user: CurrentUser,
 ):
     """Create a thread."""
     try:
-        thread = await srvc.create(db_session, thread_in, current_user)
+        thread = await srvc.create(
+            db_session, request.app.state.cache, thread_in, current_user
+        )
         return thread
     except Exception:
         raise HTTPException(
