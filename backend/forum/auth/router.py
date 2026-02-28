@@ -5,7 +5,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 from pydantic import PositiveInt
-
 from forum.auth.dependencies import (
     CurrentUser,
     get_moderator_user,
@@ -64,8 +63,8 @@ async def login_endpoint(
             detail="Incorrect Username or Password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except Exception as e:
-        log.error(e)
+    except Exception:
+        log.error("failure to authenticate user", exc_info=True)
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
         )
@@ -83,8 +82,8 @@ async def refresh_token_endpoint(request: Request, response: Response):
         return Token(access_token=tokens.access_token)
     except InvalidRefreshToken:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid refresh token.")
-    except Exception as e:
-        log.error(e)
+    except Exception:
+        log.error("failure to refresh user token", exc_info=True)
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
         )
@@ -103,6 +102,7 @@ async def register_user(db_session: DbSession, user_in: UserCreate, request: Req
     except EmailAlreadyExists:
         raise HTTPException(status.HTTP_409_CONFLICT, "Email already exists.")
     except Exception:
+        log.error("failed to create new user", exc_info=True)
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
         )
@@ -126,6 +126,7 @@ async def read_users(
             data=users_read,
         )
     except Exception:
+        log.error("failed to list users", exc_info=True)
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, "An unexpected error occurred"
         )
