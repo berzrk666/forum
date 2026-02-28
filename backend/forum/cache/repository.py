@@ -49,8 +49,8 @@ class CacheRepository:
         Decrements user total posts and a forum total posts.
         """
         async with cache.pipeline() as pipe:
-            await pipe.incr(f"{USER_POSTS_KEY}:{user_id}")
-            await pipe.incr(f"{FORUM_POSTS_KEY}:{forum_id}")
+            await pipe.decr(f"{USER_POSTS_KEY}:{user_id}")
+            await pipe.decr(f"{FORUM_POSTS_KEY}:{forum_id}")
             await pipe.execute()
 
     async def on_thread_created(self, cache: Redis, forum_id: int):
