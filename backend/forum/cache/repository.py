@@ -14,7 +14,7 @@ FORUM_THREADS_KEY = "forum_threads"
 
 
 class CacheRepository:
-    """Manage caching"""
+    """Repository for caching user activity, thread/post counts and forum stats."""
 
     async def push_recent_user(self, cache: Redis, user: UserRead):
         """Push user to cache to keep track of the recent users."""
@@ -29,14 +29,14 @@ class CacheRepository:
             log.error(f"Error during caching new user: {user}: {e}")
 
     async def get_recent_users(self, cache: Redis) -> list[UserRead]:
-        """Retrieve the recent 10 registered users."""
+        """Retrieve the recent registered users (up to LAST_n)."""
         users = await cache.lrange(RECENT_USERS_KEY, 0, LAST_N - 1)  # type: ignore
         return [UserRead.model_validate_json(user) for user in users]
 
     async def on_post_created(self, cache: Redis, user_id: int, forum_id: int):
         """
         Update cache after a post is created.
-        Increments user total posts and a forum total posts.
+        Increments user total posts and forum total posts.
         """
         async with cache.pipeline() as pipe:
             await pipe.incr(f"{USER_POSTS_KEY}:{user_id}")
@@ -46,7 +46,7 @@ class CacheRepository:
     async def on_post_deleted(self, cache: Redis, user_id: int, forum_id: int):
         """
         Update cache after a post is deleted.
-        Decrements user total posts and a forum total posts.
+        Decrements user total posts and forum total posts.
         """
         async with cache.pipeline() as pipe:
             await pipe.decr(f"{USER_POSTS_KEY}:{user_id}")
@@ -56,21 +56,21 @@ class CacheRepository:
     async def on_thread_created(self, cache: Redis, forum_id: int):
         """
         Update cache after a thread is created.
-        Incremets forum total threads.
+        Increments forum total threads.
         """
         await cache.incr(f"{FORUM_THREADS_KEY}:{forum_id}")
 
     async def on_thread_deleted(self, cache: Redis, forum_id: int):
         """
         Update cache after a thread is deleted.
-        Deletes forum total threads.
+        Decrements forum total threads.
         """
         await cache.decr(f"{FORUM_THREADS_KEY}:{forum_id}")
 
     async def on_forum_read(self, cache: Redis, forum_id: int) -> tuple[int, int]:
         """
-        Read cache for forum.
-        Returns the total posts of a forum and the number of threads.
+        Read cache for a single forum.
+        Returns the total posts and the number of threads.
         """
         async with cache.pipeline(transaction=False) as pipe:
             await pipe.get(f"{FORUM_POSTS_KEY}:{forum_id}")
