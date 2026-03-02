@@ -7,6 +7,7 @@ import redis.asyncio as redis
 
 from forum.api import api_router
 from forum.auth import utils
+from forum.config import settings
 from forum.database.core import sessionlocal
 from forum.cache.core import get_cache_pool
 
@@ -35,7 +36,7 @@ app.include_router(api_router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"] if settings.is_development else settings.CORS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,4 +45,4 @@ app.add_middleware(
 
 @app.get("/healthcheck")
 def healthcheck():
-    return {"status": "ok"}
+    return {"status": settings.CORS}

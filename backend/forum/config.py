@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import PostgresDsn, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -21,6 +23,10 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "127.0.0.1"
     REDIS_PORT: int = 6379
 
+    ENVIRONMENT: Literal["development", "production"] = "development"
+
+    CORS: list[str] = ["*"]
+
     @computed_field
     @property
     def DATABASE_URI(self) -> PostgresDsn:
@@ -36,5 +42,9 @@ class Settings(BaseSettings):
             path=self.POSTGRES_DB,
         )
 
+    @property
+    def is_development(self):
+        return self.ENVIRONMENT == "development"
 
-settings = Settings()
+
+settings = Settings()  # type: ignore
