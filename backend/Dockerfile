@@ -1,6 +1,14 @@
 FROM python:3.13-slim-bookworm
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+# Install AWS Certs
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+  && mkdir -p /certs \
+  && curl -o /certs/global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
+  && apt-get purge -y curl \
+  && apt-get autoremove -y \
+  && rm -rf /var/lib/apt/lists/*
+
 # Copy the project into the image
 COPY . /app
 
@@ -12,4 +20,6 @@ WORKDIR /app
 
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "forum.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+RUN chmod +x entrypoint.sh
+
+CMD ["./entrypoint.sh"]

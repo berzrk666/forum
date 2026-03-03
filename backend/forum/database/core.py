@@ -1,4 +1,5 @@
 import logging
+import ssl
 
 from datetime import datetime
 from typing import Annotated, AsyncGenerator
@@ -15,7 +16,16 @@ Base = declarative_base()
 
 log = logging.getLogger(__name__)
 
-engine = create_async_engine(str(settings.DATABASE_URI))
+if settings.is_development:
+    engine = create_async_engine(str(settings.DATABASE_URI))
+else:
+    ssl_ctx = ssl.create_default_context(
+        ssl.Purpose.CLIENT_AUTH, cafile="/certs/global-bundle.pem"
+    )
+    engine = create_async_engine(
+        str(settings.DATABASE_URI), connect_args={"ssl": ssl_ctx}
+    )
+
 sessionlocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 

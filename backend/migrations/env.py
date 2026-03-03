@@ -1,6 +1,7 @@
 from logging.config import fileConfig
+import ssl
 
-from sqlalchemy import engine_from_config
+from sqlalchemy import create_engine, engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
@@ -26,12 +27,6 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
-config.set_main_option("sqlalchemy.url", str(settings.DATABASE_URI))
 
 
 def run_migrations_offline() -> None:
@@ -65,15 +60,20 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    if settings.is_development:
+        connectable = create_engine(str(settings.DATABASE_URI), poolclass=pool.NullPool)
+    else:
+        ssl_ctx = ssl.create_default_context(
+            ssl.Purpose.CLIENT_AUTH, cafile="/certs/global-bundle.pem"
+        )
+        connectable = create_engine(
+            str(settings.DATABASE_URI),
+            connect_args={"ssl": ssl_ctx},
+            poolclass=pool.NullPool,
+        )
 
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
-
         with context.begin_transaction():
             context.run_migrations()
 
