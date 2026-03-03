@@ -1,5 +1,4 @@
 import logging
-import ssl
 
 from datetime import datetime
 from typing import Annotated, AsyncGenerator
@@ -29,12 +28,8 @@ def get_engine():
         if settings.is_development:
             _engine = create_async_engine(str(settings.DATABASE_URI))
         else:
-            ssl_ctx = ssl.create_default_context(
-                ssl.Purpose.CLIENT_AUTH, cafile="/certs/global-bundle.pem"
-            )
-            _engine = create_async_engine(
-                str(settings.DATABASE_URI), connect_args={"ssl": ssl_ctx}
-            )
+            ssl = {"sslmode": "verify-full", "sslrootcert": "/certs/global-bundle.pem"}
+            _engine = create_async_engine(str(settings.DATABASE_URI), connect_args=ssl)
     return _engine
 
 

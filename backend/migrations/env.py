@@ -1,5 +1,4 @@
 from logging.config import fileConfig
-import ssl
 
 from sqlalchemy import create_engine, engine_from_config
 from sqlalchemy import pool
@@ -63,12 +62,10 @@ def run_migrations_online() -> None:
     if settings.is_development:
         connectable = create_engine(str(settings.DATABASE_URI), poolclass=pool.NullPool)
     else:
-        ssl_ctx = ssl.create_default_context(
-            ssl.Purpose.CLIENT_AUTH, cafile="/certs/global-bundle.pem"
-        )
+        ssl = {"sslmode": "verify-full", "sslrootcert": "/certs/global-bundle.pem"}
         connectable = create_engine(
             str(settings.DATABASE_URI),
-            connect_args={"ssl": ssl_ctx},
+            connect_args=ssl,
             poolclass=pool.NullPool,
         )
 
