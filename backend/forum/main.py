@@ -8,7 +8,7 @@ import redis.asyncio as redis
 from forum.api import api_router
 from forum.auth import utils
 from forum.config import settings
-from forum.database.core import sessionlocal
+from forum.database.core import get_sessionlocal
 from forum.cache.core import get_cache_pool
 from forum.cache.repository import cache_repo
 
@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
     log.info("Starting Forum API")
 
     app.state.cache = redis.Redis(connection_pool=get_cache_pool())
-    async with sessionlocal() as session:
+    async with get_sessionlocal()() as session:
         await utils.init_roles(session)
         # Load cache from database
         await cache_repo.load_from_db(app.state.cache, session)
