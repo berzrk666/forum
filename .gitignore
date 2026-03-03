@@ -1,5 +1,4 @@
 .env
-*.md
 .DS_STORE
 
 # Python-generated files
