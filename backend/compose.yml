@@ -22,32 +22,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      db:
-        condition: service_healthy
       cache:
         condition: service_healthy
-  db:
-    image: postgres:16-alpine
-    container_name: forum-db
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PWD}
-      POSTGRES_PORT: ${POSTGRES_PORT}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    ports:
-      - "${POSTGRES_PORT}:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-  adminer:
-    image: adminer
-    container_name: forum-adminer
-    ports:
-      - "5050:8080"
   cache:
     image: redis:latest
     ports:
@@ -57,5 +33,3 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-volumes:
-  postgres_data:
