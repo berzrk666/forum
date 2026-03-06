@@ -31,6 +31,8 @@ jobs:
           node-version: 25
 
       - name: Build Frontend
+        env:
+          VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
         run: |
           npm ci
           npm run build
