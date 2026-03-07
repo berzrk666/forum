@@ -29,6 +29,8 @@ class Settings(BaseSettings):
 
     CORS: list[str] = ["*"]
 
+    PORT: int = 8000
+
     # AWS Secrets
     AWS_REGION_NAME: str = ""
 

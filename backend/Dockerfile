@@ -19,7 +19,7 @@ ENV UV_NO_DEV=1
 WORKDIR /app
 RUN uv sync --locked
 
-EXPOSE 8000
+EXPOSE ${PORT:-80}
 
 RUN chmod +x entrypoint.sh
 
