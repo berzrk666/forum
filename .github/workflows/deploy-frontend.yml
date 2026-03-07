@@ -41,3 +41,9 @@ jobs:
       - name: AWS S3 Sync
         run: |
           aws s3 sync dist s3://${{ vars.AWS_S3BUCKET_NAME }}
+
+      - name: Invalidate Cloudfront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ vars.CLOUDFRONT_ID }} \
+            --paths "/*"
