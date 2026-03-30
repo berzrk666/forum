@@ -7,19 +7,6 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
-    develop:
-      watch:
-        # Sync the working directory with the `/app` directory in the container
-        - action: sync
-          path: .
-          target: /app
-          # Exclude the project virtual environment
-          ignore:
-            - .venv/
-
-        # Rebuild the image on changes to the `pyproject.toml`
-        - action: rebuild
-          path: pyproject.toml
     environment:
       - PORT=${PORT:-80}
     ports:
