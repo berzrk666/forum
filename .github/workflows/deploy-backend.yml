@@ -20,5 +20,5 @@ jobs:
           script: |
             cd ~/forum/backend
             git fetch && git pull
-            docker compose -f compose.yml down
-            docker compose -f compose.yml up --build -d
+            sudo docker compose -f compose.yml down
+            sudo docker compose -f compose.yml up --build -d
